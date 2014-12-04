@@ -32,6 +32,7 @@ namespace Sphere.Shaders
         public Uniform<float> ClipNear { get; protected set; }
         public Uniform<float> ClipFar { get; protected set; }
 
+        public Uniform<float> EdgesPerScreenHeight { get; protected set; }
         public Uniform<float> TessellationScale { get; protected set; }
     }
 }

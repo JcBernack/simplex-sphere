@@ -22,14 +22,17 @@ namespace Sphere
         private float _tessellationScale;
         private Icosahedron _icosahedron;
 
-        private readonly CameraBase _camera;
+        private readonly RotateAroundOriginCamera _camera;
         private Matrix4 _modelMatrix;
         private Matrix4 _viewMatrix;
         private Matrix4 _modelViewMatrix;
         private Matrix4 _projectionMatrix;
+        private bool _updateEyePosition;
 
         private const float ClipNear = 0.1f;
-        private const float ClipFar = 100;
+        private const float ClipFar = 5000;
+        
+        private const float PixelsPerEdge = 100;
 
         public SphereWindow()
             : base(800, 600, GraphicsMode.Default, "Sphere")
@@ -37,16 +40,19 @@ namespace Sphere
             // disable vsync
             VSync = VSyncMode.Off;
             // set up camera
-            _camera = new FirstPersonCamera();
+            _camera = new RotateAroundOriginCamera();
             _camera.Enable(this);
-            _camera.DefaultPosition.Z = 20;
+            _camera.DefaultPosition.Z = 300;
+            _camera.DefaultOrigin.Y = 0;
             _camera.ResetToDefault();
+            _updateEyePosition = true;
             // set default tesselation levels
-            _tessellationScale = 0.15f;
+            _tessellationScale = 1;
             // hook up events
-            RenderFrame += OnRender;
             Load += OnLoad;
             Unload += OnUnload;
+            RenderFrame += OnRender;
+            UpdateFrame += OnUpdate;
             KeyDown += OnKeyDown;
             Resize += OnResize;
         }
@@ -63,8 +69,7 @@ namespace Sphere
             _program.ClipNear.Set(ClipNear);
             _program.ClipFar.Set(ClipFar);
             // create icosahedron and set model matrix
-            //TODO: translation is kaputt
-            _modelMatrix = Matrix4.CreateScale(1) * Matrix4.CreateTranslation(0, 0, 0);
+            _modelMatrix = Matrix4.CreateScale(100);
             _icosahedron = new Icosahedron();
             _icosahedron.UpdateBuffers();
             // bind it to an vao
@@ -93,6 +98,11 @@ namespace Sphere
             _projectionMatrix = Matrix4.CreatePerspectiveFieldOfView(MathHelper.PiOver4, aspectRatio, ClipNear, ClipFar);
         }
 
+        private void OnUpdate(object sender, FrameEventArgs e)
+        {
+            _modelMatrix *= Matrix4.CreateRotationX((float) e.Time * 0.2f);
+        }
+
         private void OnRender(object sender, FrameEventArgs e)
         {
             var eye = _camera.GetEyePosition();
@@ -108,9 +118,13 @@ namespace Sphere
             _program.ModelViewMatrix.Set(_modelViewMatrix);
             _program.ModelViewProjectionMatrix.Set(_modelViewMatrix*_projectionMatrix);
             _program.NormalMatrix.Set(new Matrix3(_modelViewMatrix));
-            _program.CameraPosition.Set(_camera.GetEyePosition());
+            if (_updateEyePosition) _program.CameraPosition.Set(eye);
             _program.LightPosition.Set(new Vector3(0.25f, 0.25f, 1));
             _program.TessellationScale.Set(_tessellationScale);
+
+            // calculate tessellation level stuff
+            _program.EdgesPerScreenHeight.Set(Height / PixelsPerEdge);
+
             _vao.DrawElements(PrimitiveType.Patches, _icosahedron.IndexBuffer.ElementCount);
             SwapBuffers();
         }
@@ -123,6 +137,7 @@ namespace Sphere
             const float dec = 1 - 0.1f;
             if (e.Key == Key.Up) _tessellationScale *= inc;
             if (e.Key == Key.Down) _tessellationScale *= dec;
+            if (e.Key == Key.Tab) _updateEyePosition = !_updateEyePosition;
         }
 
         public static void Main(string[] args)

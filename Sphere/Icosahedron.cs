@@ -30,6 +30,9 @@ namespace Sphere
                 new Vector3(-t, 0,-1),
                 new Vector3(-t, 0, 1)
             };
+            
+            // normalize vector to unit length
+            for (var i = 0; i < Vertices.Length; i++) Vertices[i].Normalize();
 
             Indices = new uint[]
             {
