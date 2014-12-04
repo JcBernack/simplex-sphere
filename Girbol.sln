@@ -1,0 +1,34 @@
+﻿
+Microsoft Visual Studio Solution File, Format Version 12.00
+# Visual Studio 2013
+VisualStudioVersion = 12.0.30723.0
+MinimumVisualStudioVersion = 10.0.40219.1
+Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "Sphere", "Sphere\Sphere.csproj", "{D6427F6A-E158-4D75-9B23-F4CD9F06297D}"
+EndProject
+Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "DerpGL", "..\DerpGL\DerpGL\DerpGL.csproj", "{0EE3347B-1BBE-44CA-8295-22DA13AE914A}"
+EndProject
+Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "Examples", "..\DerpGL\Examples\Examples.csproj", "{B05720A6-8E0A-4D53-96D1-AA341AE0D0D5}"
+EndProject
+Global
+	GlobalSection(SolutionConfigurationPlatforms) = preSolution
+		Debug|Any CPU = Debug|Any CPU
+		Release|Any CPU = Release|Any CPU
+	EndGlobalSection
+	GlobalSection(ProjectConfigurationPlatforms) = postSolution
+		{D6427F6A-E158-4D75-9B23-F4CD9F06297D}.Debug|Any CPU.ActiveCfg = Debug|Any CPU
+		{D6427F6A-E158-4D75-9B23-F4CD9F06297D}.Debug|Any CPU.Build.0 = Debug|Any CPU
+		{D6427F6A-E158-4D75-9B23-F4CD9F06297D}.Release|Any CPU.ActiveCfg = Release|Any CPU
+		{D6427F6A-E158-4D75-9B23-F4CD9F06297D}.Release|Any CPU.Build.0 = Release|Any CPU
+		{0EE3347B-1BBE-44CA-8295-22DA13AE914A}.Debug|Any CPU.ActiveCfg = Debug|Any CPU
+		{0EE3347B-1BBE-44CA-8295-22DA13AE914A}.Debug|Any CPU.Build.0 = Debug|Any CPU
+		{0EE3347B-1BBE-44CA-8295-22DA13AE914A}.Release|Any CPU.ActiveCfg = Release|Any CPU
+		{0EE3347B-1BBE-44CA-8295-22DA13AE914A}.Release|Any CPU.Build.0 = Release|Any CPU
+		{B05720A6-8E0A-4D53-96D1-AA341AE0D0D5}.Debug|Any CPU.ActiveCfg = Debug|Any CPU
+		{B05720A6-8E0A-4D53-96D1-AA341AE0D0D5}.Debug|Any CPU.Build.0 = Debug|Any CPU
+		{B05720A6-8E0A-4D53-96D1-AA341AE0D0D5}.Release|Any CPU.ActiveCfg = Release|Any CPU
+		{B05720A6-8E0A-4D53-96D1-AA341AE0D0D5}.Release|Any CPU.Build.0 = Release|Any CPU
+	EndGlobalSection
+	GlobalSection(SolutionProperties) = preSolution
+		HideSolutionNode = FALSE
+	EndGlobalSection
+EndGlobal
