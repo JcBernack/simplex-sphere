@@ -19,7 +19,7 @@ namespace Sphere
         private GeodesicProgram _program;
         private VertexArray _vao;
 
-        private float _tessellationScale;
+        private float _terrainScale;
         private Icosahedron _icosahedron;
 
         private readonly RotateAroundOriginCamera _camera;
@@ -27,7 +27,6 @@ namespace Sphere
         private Matrix4 _viewMatrix;
         private Matrix4 _modelViewMatrix;
         private Matrix4 _projectionMatrix;
-        private bool _updateEyePosition;
 
         private const float ClipNear = 0.1f;
         private const float ClipFar = 5000;
@@ -42,12 +41,11 @@ namespace Sphere
             // set up camera
             _camera = new RotateAroundOriginCamera();
             _camera.Enable(this);
-            _camera.DefaultPosition.Z = 300;
-            _camera.DefaultOrigin.Y = 0;
+            _camera.DefaultPosition.Z = 10;
+            _camera.DefaultOrigin.Y = 1;
             _camera.ResetToDefault();
-            _updateEyePosition = true;
             // set default tesselation levels
-            _tessellationScale = 1;
+            _terrainScale = 0.1f;
             // hook up events
             Load += OnLoad;
             Unload += OnUnload;
@@ -66,10 +64,9 @@ namespace Sphere
             _program.Use();
             _program.AmbientMaterial.Set(new Vector3(0.04f, 0.04f, 0.04f));
             _program.DiffuseMaterial.Set(new Vector3(0, 0.75f, 0.75f));
-            _program.ClipNear.Set(ClipNear);
-            _program.ClipFar.Set(ClipFar);
+            _program.Radius.Set(5);
             // create icosahedron and set model matrix
-            _modelMatrix = Matrix4.CreateScale(100);
+            _modelMatrix = Matrix4.CreateScale(1);
             _icosahedron = new Icosahedron();
             _icosahedron.UpdateBuffers();
             // bind it to an vao
@@ -81,6 +78,7 @@ namespace Sphere
             GL.ClearColor(Color4.Black);
             GL.Enable(EnableCap.DepthTest);
             GL.Enable(EnableCap.CullFace);
+            GL.PatchParameter(PatchParameterInt.PatchVertices, 3);
         }
 
         private void OnUnload(object sender, EventArgs e)
@@ -105,26 +103,20 @@ namespace Sphere
 
         private void OnRender(object sender, FrameEventArgs e)
         {
-            var eye = _camera.GetEyePosition();
-            Title = string.Format("Icosahedron tesselation level - tessellation scale: {0} - FPS: {1} - eye: {2}", _tessellationScale, FrameTimer.FpsBasedOnFramesRendered, eye);
+            Title = string.Format("Icosahedron tesselation level - tessellation scale: {0} - FPS: {1} - eye: {2}", _terrainScale, FrameTimer.FpsBasedOnFramesRendered, _camera.GetEyePosition());
             _viewMatrix = Matrix4.Identity;
             _camera.ApplyCamera(ref _viewMatrix);
             Matrix4.Mult(ref _modelMatrix, ref _viewMatrix, out _modelViewMatrix);
             GL.Clear(ClearBufferMask.ColorBufferBit | ClearBufferMask.DepthBufferBit);
-            GL.PatchParameter(PatchParameterInt.PatchVertices, 3);
             _program.ModelMatrix.Set(_modelMatrix);
             _program.ViewMatrix.Set(_viewMatrix);
             _program.ProjectionMatrix.Set(_projectionMatrix);
             _program.ModelViewMatrix.Set(_modelViewMatrix);
             _program.ModelViewProjectionMatrix.Set(_modelViewMatrix*_projectionMatrix);
             _program.NormalMatrix.Set(new Matrix3(_modelViewMatrix));
-            if (_updateEyePosition) _program.CameraPosition.Set(eye);
             _program.LightPosition.Set(new Vector3(0.25f, 0.25f, 1));
-            _program.TessellationScale.Set(_tessellationScale);
-
-            // calculate tessellation level stuff
             _program.EdgesPerScreenHeight.Set(Height / PixelsPerEdge);
-
+            _program.TerrainScale.Set(_terrainScale);
             _vao.DrawElements(PrimitiveType.Patches, _icosahedron.IndexBuffer.ElementCount);
             SwapBuffers();
         }
@@ -135,9 +127,8 @@ namespace Sphere
             if (e.Key == Key.R) _camera.ResetToDefault();
             const float inc = 1 + 0.1f;
             const float dec = 1 - 0.1f;
-            if (e.Key == Key.Up) _tessellationScale *= inc;
-            if (e.Key == Key.Down) _tessellationScale *= dec;
-            if (e.Key == Key.Tab) _updateEyePosition = !_updateEyePosition;
+            if (e.Key == Key.Up) _terrainScale *= inc;
+            if (e.Key == Key.Down) _terrainScale *= dec;
         }
 
         public static void Main(string[] args)

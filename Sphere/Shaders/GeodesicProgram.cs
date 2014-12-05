@@ -27,12 +27,8 @@ namespace Sphere.Shaders
         public Uniform<Vector3> DiffuseMaterial { get; protected set; }
         public Uniform<Vector3> AmbientMaterial { get; protected set; }
         
-        public Uniform<Vector3> CameraPosition { get; protected set; }
-
-        public Uniform<float> ClipNear { get; protected set; }
-        public Uniform<float> ClipFar { get; protected set; }
-
         public Uniform<float> EdgesPerScreenHeight { get; protected set; }
-        public Uniform<float> TessellationScale { get; protected set; }
+        public Uniform<float> Radius { get; protected set; }
+        public Uniform<float> TerrainScale { get; protected set; }
     }
 }

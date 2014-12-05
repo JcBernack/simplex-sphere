@@ -1,14 +1,23 @@
-﻿-- Vertex
+﻿-- Matrices
+uniform mat4 ModelMatrix;
+uniform mat4 ViewMatrix;
+uniform mat4 ProjectionMatrix;
+uniform mat4 ModelViewMatrix;
+uniform mat4 ModelViewProjectionMatrix;
+uniform mat3 NormalMatrix;
+
+-- Vertex
 #version 400
 
 in vec4 Position;
 out vec3 vPosition;
 
-uniform mat4 ModelMatrix;
+#include Geodesic.Matrices
 
 void main()
 {
-    vPosition = (ModelMatrix * Position).xyz;
+    vPosition = Position.xyz;
+    //vPosition = (ModelViewMatrix * (Radius * Position)).xyz;
 }
 
 -- TessControl
@@ -19,33 +28,24 @@ layout(vertices = 3) out;
 in vec3 vPosition[];
 out vec3 tcPosition[];
 
-uniform float TessellationScale;
+#include Geodesic.Matrices
+
+uniform float Radius;
 uniform float EdgesPerScreenHeight;
-
-uniform float ClipNear;
-uniform float ClipFar;
-uniform vec3 CameraPosition;
-
-uniform mat4 ViewMatrix;
-uniform mat4 ProjectionMatrix;
 
 // source for tessellation level calculation:
 // https://developer.nvidia.com/content/dynamic-hardware-tessellation-basics
-
 float GetTessLevel(vec3 cp1, vec3 cp2)
 {
-	vec3 midpoint = (cp1 + cp2) / 2.0;
-	float scale = 1 - ((distance(midpoint, CameraPosition) - ClipNear) / (ClipFar - ClipNear));
-	return clamp(TessellationScale * scale * 63 + 1, 1, 64);
-}
-
-float GetTessLevel2(vec3 cp1, vec3 cp2)
-{
-	float D = distance(cp1, cp2);
-	vec3 midpoint = (cp1 + cp2) / 2.0;
-	vec4 clipPos = ProjectionMatrix * ViewMatrix * vec4(midpoint, 1);
-	D = abs(D * ProjectionMatrix[1][1] / clipPos.w);
-	return D * EdgesPerScreenHeight;
+	vec3 midpoint = Radius * normalize((cp1 + cp2) / 2);
+	vec4 p1 = ModelViewMatrix * vec4(Radius * cp1, 1);
+	vec4 p2 = ModelViewMatrix * vec4(Radius * cp2, 1);
+	vec4 clipPos = ModelViewProjectionMatrix * vec4(midpoint, 1);
+	float D = abs(distance(p1, p2) * ProjectionMatrix[1][1] / clipPos.w);
+	//vec3 midpoint = (cp1 + cp2) / 2;
+	//vec4 clipPos = ProjectionMatrix * vec4(midpoint, 1);
+	//float D = abs(distance(cp1, cp2) * ProjectionMatrix[1][1] / clipPos.w);
+	return clamp(D * EdgesPerScreenHeight, 1, 64);
 }
 
 void main()
@@ -56,9 +56,9 @@ void main()
 	//gl_TessLevelOuter[ID] = GetTessLevel(vPosition[(ID+1)%3], vPosition[(ID+2)%3]);
 	if (ID == 0)
 	{
-		gl_TessLevelOuter[0] = GetTessLevel2(vPosition[1], vPosition[2]);
-		gl_TessLevelOuter[1] = GetTessLevel2(vPosition[2], vPosition[0]);
-		gl_TessLevelOuter[2] = GetTessLevel2(vPosition[0], vPosition[1]);
+		gl_TessLevelOuter[0] = GetTessLevel(vPosition[1], vPosition[2]);
+		gl_TessLevelOuter[1] = GetTessLevel(vPosition[2], vPosition[0]);
+		gl_TessLevelOuter[2] = GetTessLevel(vPosition[0], vPosition[1]);
 		gl_TessLevelInner[0] = max(max(gl_TessLevelOuter[0], gl_TessLevelOuter[1]), gl_TessLevelOuter[2]);
 	}
 }
@@ -72,16 +72,17 @@ in vec3 tcPosition[];
 out vec3 tePosition;
 out vec3 tePatchDistance;
 
-uniform mat4 ModelMatrix;
-uniform mat4 ViewMatrix;
-uniform mat4 ProjectionMatrix;
+#include Geodesic.Matrices
+
+uniform float Radius;
+uniform float TerrainScale;
 
 float GetHeight(vec3 pos)
 {
 	float len = length(pos);
 	float yaw = asin(pos.x / len);
 	float pitch = asin(pos.y / len);
-	return 10 * sin(pitch*10) * cos(yaw*10);
+	return sin(pitch*10) * cos(yaw*10);
 }
 
 void main()
@@ -91,9 +92,10 @@ void main()
     vec3 p2 = gl_TessCoord.z * tcPosition[2];
     tePatchDistance = gl_TessCoord;
     tePosition = normalize(p0 + p1 + p2);
-	tePosition *= length(tcPosition[0]) + GetHeight(tePosition);
+	tePosition *= Radius + TerrainScale * GetHeight(tePosition);
     //tePosition = p0 + p1 + p2;
-    gl_Position = ProjectionMatrix * ViewMatrix * vec4(tePosition, 1);
+    //gl_Position = ProjectionMatrix * ViewMatrix * vec4(tePosition, 1);
+    gl_Position = ModelViewProjectionMatrix * vec4(tePosition, 1);
 }
 
 -- Geometry
@@ -109,7 +111,7 @@ out vec3 gFacetNormal;
 out vec3 gPatchDistance;
 out vec3 gTriDistance;
 
-uniform mat3 NormalMatrix;
+#include Geodesic.Matrices
 
 void main()
 {
