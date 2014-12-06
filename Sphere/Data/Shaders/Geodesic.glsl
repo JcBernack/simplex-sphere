@@ -66,11 +66,14 @@ void main()
 -- TessEval
 #version 400
 
-layout(triangles, equal_spacing, cw) in;
+layout(triangles, fractional_even_spacing, ccw) in;
 in vec3 tcPosition[];
 
 out vec3 tePosition;
 out vec3 tePatchDistance;
+out vec3 teNormal;
+
+out vec4 FeedbackPosition;
 
 #include Geodesic.Matrices
 
@@ -87,63 +90,28 @@ float GetHeight(vec3 pos)
 
 void main()
 {
+	// calculate new point on the unit sphere
     vec3 p0 = gl_TessCoord.x * tcPosition[0];
     vec3 p1 = gl_TessCoord.y * tcPosition[1];
     vec3 p2 = gl_TessCoord.z * tcPosition[2];
-    tePatchDistance = gl_TessCoord;
-    tePosition = normalize(p0 + p1 + p2);
-	tePosition *= Radius + TerrainScale * GetHeight(tePosition);
-    //tePosition = p0 + p1 + p2;
-    //gl_Position = ProjectionMatrix * ViewMatrix * vec4(tePosition, 1);
-    gl_Position = ModelViewProjectionMatrix * vec4(tePosition, 1);
-}
-
--- Geometry
-#version 400
-
-layout(triangles) in;
-layout(triangle_strip, max_vertices = 3) out;
-
-in vec3 tePosition[3];
-in vec3 tePatchDistance[3];
-
-out vec3 gFacetNormal;
-out vec3 gPatchDistance;
-out vec3 gTriDistance;
-
-#include Geodesic.Matrices
-
-void main()
-{
-    vec3 A = tePosition[2] - tePosition[0];
-    vec3 B = tePosition[1] - tePosition[0];
-    gFacetNormal = NormalMatrix * normalize(cross(A, B));
-    
-    gPatchDistance = tePatchDistance[0];
-    gTriDistance = vec3(1, 0, 0);
-    gl_Position = gl_in[0].gl_Position;
-	EmitVertex();
-
-    gPatchDistance = tePatchDistance[1];
-    gTriDistance = vec3(0, 1, 0);
-    gl_Position = gl_in[1].gl_Position;
-	EmitVertex();
-
-    gPatchDistance = tePatchDistance[2];
-    gTriDistance = vec3(0, 0, 1);
-    gl_Position = gl_in[2].gl_Position;
-	EmitVertex();
-
-    EndPrimitive();
+	tePosition = normalize(p0 + p1 + p2);
+	teNormal = NormalMatrix * tePosition;
+	// write the vertex out to the transform feedback buffer
+	FeedbackPosition = vec4(tePosition, 0);
+	// scale unit sphere
+	tePosition *=  Radius + TerrainScale * GetHeight(tePosition);
+	tePosition = (ModelMatrix * vec4(tePosition, 1)).xyz;
+	// output to geometry stage
+	tePatchDistance = gl_TessCoord;
+    gl_Position = ProjectionMatrix * ViewMatrix * vec4(tePosition, 1);
 }
 
 -- Fragment
 #version 400
 
-in vec3 gFacetNormal;
-in vec3 gTriDistance;
-in vec3 gPatchDistance;
-in float gPrimitive;
+in vec3 tePosition;
+in vec3 teNormal;
+in vec3 tePatchDistance;
 
 out vec4 FragColor;
 
@@ -161,14 +129,15 @@ float amplify(float d, float scale, float offset)
 
 void main()
 {
-    vec3 N = normalize(gFacetNormal);
-    vec3 L = LightPosition;
-    float df = abs(dot(N, L));
+	vec3 N = normalize(teNormal);
+    vec3 L = normalize(LightPosition - tePosition);
+    float df = max(0, dot(N, L));
     vec3 color = AmbientMaterial + df * DiffuseMaterial;
 
-    float d1 = min(min(gTriDistance.x, gTriDistance.y), gTriDistance.z);
-    float d2 = min(min(gPatchDistance.x, gPatchDistance.y), gPatchDistance.z);
-    color = amplify(d1, 40, -0.5) * amplify(d2, 200, -0.5) * color;
+    //float d1 = min(min(gTriDistance.x, gTriDistance.y), gTriDistance.z);
+    float d2 = min(min(tePatchDistance.x, tePatchDistance.y), tePatchDistance.z);
+    //color = amplify(d1, 40, -0.5) * amplify(d2, 200, -0.5) * color;
+    color = amplify(d2, 200, -0.5) * color;
 
     FragColor = vec4(color, 1.0);
 }
