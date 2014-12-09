@@ -93,15 +93,6 @@ uniform float Radius;
 uniform float TerrainScale;
 uniform float HeightScale;
 
-float GetHeight(vec3 pos)
-{
-	return snoise(pos * TerrainScale);
-	//float len = length(pos);
-	//float yaw = asin(pos.x / len);
-	//float pitch = asin(pos.y / len);
-	//return sin(pitch*10) * cos(yaw*10);
-}
-
 void main()
 {
 	// calculate new point on the unit sphere
@@ -113,10 +104,10 @@ void main()
 	// write the vertex out to the transform feedback buffer
 	FeedbackPosition = vec4(tePosition, 0);
 	// scale unit sphere
-	teHeight = GetHeight(tePosition);
+	teHeight = snoise(tePosition * TerrainScale);
 	tePosition *=  Radius + HeightScale * teHeight;
 	tePosition = (ModelMatrix * vec4(tePosition, 1)).xyz;
-	// output to geometry stage
+	// output
 	tePatchDistance = gl_TessCoord;
     gl_Position = ProjectionMatrix * ViewMatrix * vec4(tePosition, 1);
 }
@@ -143,19 +134,48 @@ float amplify(float d, float scale, float offset)
     return d;
 }
 
+const int NumColors = 7;
+const vec3 Colors[] = vec3[NumColors](
+	vec3(0, 0, 0.5), // deeps
+	vec3(0, 0, 1), // shallow
+	vec3(0, 0.5, 1), // shore
+	vec3(0.9375, 0.9375, 0.25), // sand
+	vec3(0.125, 0.625, 0), // grass
+	//vec3(0.875, 0.875, 0), // dirt
+	vec3(0.5, 0.5, 0.5), // rock
+	vec3(1, 1, 1) //snow
+);
+const float Steps[] = float[NumColors](
+-1,
+-0.25,
+0,
+0.0625,
+0.125,
+//0.375,
+0.75,
+0.9);
+
 void main()
 {
-	FragColor = vec4(teHeight, -teHeight, 0, 1);
-	return;
-	vec3 N = normalize(teNormal);
-    vec3 L = normalize(LightPosition - tePosition);
-    float df = max(0, dot(N, L));
-    vec3 color = AmbientMaterial + df * DiffuseMaterial;
+	float x = teHeight;
+	vec3 color = mix(Colors[0], Colors[1], smoothstep(Steps[0], Steps[1], x));
+	for (int i = 2; i < NumColors; i++)
+	{
+		color = mix(color, Colors[i], smoothstep(Steps[i-1], Steps[i], x));
+	}
+	FragColor = vec4(color, 1.0);
+	
+	//FragColor = vec4(teHeight, -teHeight, 0, 1);
+	
+	//vec3 N = normalize(teNormal);
+	//vec3 L = normalize(LightPosition - tePosition);
+	//float df = max(0, dot(N, L));
+	//vec3 color = AmbientMaterial + df * DiffuseMaterial;
 
-    //float d1 = min(min(gTriDistance.x, gTriDistance.y), gTriDistance.z);
-    float d2 = min(min(tePatchDistance.x, tePatchDistance.y), tePatchDistance.z);
-    //color = amplify(d1, 40, -0.5) * amplify(d2, 200, -0.5) * color;
-    color = amplify(d2, 200, -0.5) * color;
+	////float d1 = min(min(gTriDistance.x, gTriDistance.y), gTriDistance.z);
+	//float d2 = min(min(tePatchDistance.x, tePatchDistance.y), tePatchDistance.z);
+	////color = amplify(d1, 40, -0.5) * amplify(d2, 200, -0.5) * color;
+	//color = amplify(d2, 200, -0.5) * color;
 
-    FragColor = vec4(color, 1.0);
+	//FragColor = vec4(color, 1.0);
 }
