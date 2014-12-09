@@ -32,11 +32,13 @@ namespace Sphere
         private Matrix4 _modelViewMatrix;
         private Matrix4 _projectionMatrix;
 
-        private const float ClipNear = 0.1f;
-        private const float ClipFar = 10000;
-        private float _pixelsPerEdge = 100;
+        private const float ClipNear = 2;
+        private const float ClipFar = 1000;
+        private float _pixelsPerEdge = 30;
         private bool _rebase;
         private bool _drawFromFeedback;
+        private float _radius;
+        private float _heightScale;
 
         public SphereWindow()
             : base(800, 600, GraphicsMode.Default, "Sphere")
@@ -50,6 +52,8 @@ namespace Sphere
             _camera.ResetToDefault();
             // set default tesselation levels
             _terrainScale = 1;
+            _heightScale = 1;
+            _radius = 50;
             // hook up events
             Load += OnLoad;
             Unload += OnUnload;
@@ -131,7 +135,6 @@ namespace Sphere
             _program.AmbientMaterial.Set(new Vector3(0.2f, 0.2f, 0.2f));
             _program.DiffuseMaterial.Set(new Vector3(0.25f, 0.75f, 0.75f));
             _program.LightPosition.Set(new Vector3(0, 2000, 10));
-            _program.Radius.Set(50);
             _program.ModelMatrix.Set(_modelMatrix);
             _program.ViewMatrix.Set(_viewMatrix);
             _program.ProjectionMatrix.Set(_projectionMatrix);
@@ -139,7 +142,9 @@ namespace Sphere
             _program.ModelViewProjectionMatrix.Set(_modelViewMatrix*_projectionMatrix);
             _program.NormalMatrix.Set(_modelMatrix.GetNormalMatrix());
             _program.EdgesPerScreenHeight.Set(Height / _pixelsPerEdge);
+            _program.Radius.Set(_radius);
             _program.TerrainScale.Set(_terrainScale);
+            _program.HeightScale.Set(_heightScale);
             _vao.BindAttribute(_program.Position, _feedbackBuffer.Ping);
             if (_rebase)
             {
@@ -163,12 +168,14 @@ namespace Sphere
         {
             if (e.Key == Key.Escape) Close();
             if (e.Key == Key.R) _camera.ResetToDefault();
-            const float inc = 1 + 0.1f;
-            const float dec = 1 - 0.1f;
-            if (e.Key == Key.Up) _terrainScale *= inc;
-            if (e.Key == Key.Down) _terrainScale *= dec;
+            if (e.Key == Key.Up) _radius *= 1.01f;
+            if (e.Key == Key.Down) _radius *= 0.99f;
             if (e.Key == Key.Right) _pixelsPerEdge += 1;
             if (e.Key == Key.Left) _pixelsPerEdge -= 1;
+            if (e.Key == Key.PageUp) _heightScale *= 1.1f;
+            if (e.Key == Key.PageDown) _heightScale *= 0.9f;
+            if (e.Key == Key.Home) _terrainScale *= 1.01f;
+            if (e.Key == Key.End) _terrainScale *= 0.99f;
             if (e.Key == Key.Enter) _rebase = true;
             if (e.Key == Key.F1) GL.PolygonMode(MaterialFace.FrontAndBack, PolygonMode.Fill);
             if (e.Key == Key.F2) GL.PolygonMode(MaterialFace.FrontAndBack, PolygonMode.Line);

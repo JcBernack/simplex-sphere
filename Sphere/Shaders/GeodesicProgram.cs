@@ -36,6 +36,7 @@ namespace Sphere.Shaders
         public Uniform<float> EdgesPerScreenHeight { get; protected set; }
         public Uniform<bool> RoundTessellationLevel { get; protected set; }
         public Uniform<float> TerrainScale { get; protected set; }
+        public Uniform<float> HeightScale { get; protected set; }
     }
 
     [TessEvaluationShaderSource("Geodesic.TessEval.Odd")]

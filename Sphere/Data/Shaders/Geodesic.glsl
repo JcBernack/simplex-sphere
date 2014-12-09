@@ -91,10 +91,11 @@ out vec4 FeedbackPosition;
 
 uniform float Radius;
 uniform float TerrainScale;
+uniform float HeightScale;
 
 float GetHeight(vec3 pos)
 {
-	return snoise(pos*4);
+	return snoise(pos * TerrainScale);
 	//float len = length(pos);
 	//float yaw = asin(pos.x / len);
 	//float pitch = asin(pos.y / len);
@@ -113,7 +114,7 @@ void main()
 	FeedbackPosition = vec4(tePosition, 0);
 	// scale unit sphere
 	teHeight = GetHeight(tePosition);
-	tePosition *=  Radius + TerrainScale * teHeight;
+	tePosition *=  Radius + HeightScale * teHeight;
 	tePosition = (ModelMatrix * vec4(tePosition, 1)).xyz;
 	// output to geometry stage
 	tePatchDistance = gl_TessCoord;
