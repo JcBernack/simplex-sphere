@@ -16,6 +16,8 @@ namespace Sphere
     public class SphereWindow
         : DerpWindow
     {
+        private GeodesicProgramEqual _programEqual;
+        private GeodesicProgramOdd _programOdd;
         private GeodesicProgram _program;
         private VertexArray _vao;
 
@@ -24,14 +26,14 @@ namespace Sphere
         private BufferPod<Vector4> _feedbackBuffer;
         private TransformFeedback _transform;
 
-        private readonly RotateAroundOriginCamera _camera;
+        private CameraBase _camera;
         private Matrix4 _modelMatrix;
         private Matrix4 _viewMatrix;
         private Matrix4 _modelViewMatrix;
         private Matrix4 _projectionMatrix;
 
         private const float ClipNear = 0.1f;
-        private const float ClipFar = 5000;
+        private const float ClipFar = 10000;
         private float _pixelsPerEdge = 100;
         private bool _rebase;
         private bool _drawFromFeedback;
@@ -42,10 +44,9 @@ namespace Sphere
             // disable vsync
             VSync = VSyncMode.Off;
             // set up camera
-            _camera = new RotateAroundOriginCamera();
+            _camera = new ThirdPersonCamera();
             _camera.Enable(this);
-            _camera.DefaultPosition.Z = 20;
-            _camera.DefaultOrigin.Y = 0;
+            _camera.DefaultPosition.Z = 700;
             _camera.ResetToDefault();
             // set default tesselation levels
             _terrainScale = 1;
@@ -63,12 +64,9 @@ namespace Sphere
             // maximize window
             WindowState = WindowState.Maximized;
             // load program
-            _program = ProgramFactory.Create<GeodesicProgram>();
-            _program.Use();
-            _program.AmbientMaterial.Set(new Vector3(0.2f, 0.2f, 0.2f));
-            _program.DiffuseMaterial.Set(new Vector3(0.25f, 0.75f, 0.75f));
-            _program.LightPosition.Set(new Vector3(0, 20, 10));
-            _program.Radius.Set(5);
+            _programOdd = ProgramFactory.Create<GeodesicProgramOdd>();
+            _programEqual = ProgramFactory.Create<GeodesicProgramEqual>();
+            _program = _programOdd;
             // create icosahedron and set model matrix
             _modelMatrix = Matrix4.CreateScale(1);
             _icosahedron = new Icosahedron();
@@ -82,7 +80,7 @@ namespace Sphere
             // initialize feedback buffer
             _feedbackBuffer = new BufferPod<Vector4>(); 
             _feedbackBuffer.Init(BufferTarget.ArrayBuffer, vertices);
-            _feedbackBuffer.Resize(BufferTarget.ArrayBuffer, vertices.Length*1000);
+            _feedbackBuffer.Resize(BufferTarget.ArrayBuffer, vertices.Length * 10000);
             // initialize transform feedback object
             _transform = new TransformFeedback();
             _transform.Bind();
@@ -118,7 +116,7 @@ namespace Sphere
 
         private void OnUpdate(object sender, FrameEventArgs e)
         {
-            _modelMatrix *= Matrix4.CreateRotationX((float) e.Time * 0.2f);
+            //_modelMatrix *= Matrix4.CreateRotationX((float) e.Time * 0.2f);
         }
 
         private void OnRender(object sender, FrameEventArgs e)
@@ -129,6 +127,11 @@ namespace Sphere
             _camera.ApplyCamera(ref _viewMatrix);
             Matrix4.Mult(ref _modelMatrix, ref _viewMatrix, out _modelViewMatrix);
             GL.Clear(ClearBufferMask.ColorBufferBit | ClearBufferMask.DepthBufferBit);
+            _program.Use();
+            _program.AmbientMaterial.Set(new Vector3(0.2f, 0.2f, 0.2f));
+            _program.DiffuseMaterial.Set(new Vector3(0.25f, 0.75f, 0.75f));
+            _program.LightPosition.Set(new Vector3(0, 2000, 10));
+            _program.Radius.Set(50);
             _program.ModelMatrix.Set(_modelMatrix);
             _program.ViewMatrix.Set(_viewMatrix);
             _program.ProjectionMatrix.Set(_projectionMatrix);
@@ -167,6 +170,22 @@ namespace Sphere
             if (e.Key == Key.Right) _pixelsPerEdge += 1;
             if (e.Key == Key.Left) _pixelsPerEdge -= 1;
             if (e.Key == Key.Enter) _rebase = true;
+            if (e.Key == Key.F1) GL.PolygonMode(MaterialFace.FrontAndBack, PolygonMode.Fill);
+            if (e.Key == Key.F2) GL.PolygonMode(MaterialFace.FrontAndBack, PolygonMode.Line);
+            if (e.Key == Key.F3) _program = _programOdd;
+            if (e.Key == Key.F4) _program = _programEqual;
+            if (e.Key == Key.F5 || e.Key == Key.F6)
+            {
+                _camera.Disable(this);
+                var eye = _camera.GetEyePosition();
+                switch (e.Key)
+                {
+                    case Key.F5: _camera = new ThirdPersonCamera(); break;
+                    case Key.F6: _camera = new FirstPersonCamera(); break;
+                }
+                _camera.Position = eye;
+                _camera.Enable(this);
+            }
         }
 
         public static void Main(string[] args)

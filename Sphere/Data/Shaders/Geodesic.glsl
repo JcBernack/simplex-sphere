@@ -12,12 +12,9 @@ uniform mat3 NormalMatrix;
 in vec4 Position;
 out vec3 vPosition;
 
-#include Geodesic.Matrices
-
 void main()
 {
     vPosition = Position.xyz;
-    //vPosition = (ModelViewMatrix * (Radius * Position)).xyz;
 }
 
 -- TessControl
@@ -63,29 +60,45 @@ void main()
 	}
 }
 
--- TessEval
-#version 400
 
+-- TessEval.Odd
+#version 400
+layout(triangles, fractional_odd_spacing, ccw) in;
+#include Geodesic.TessEval.Main
+
+-- TessEval.Even
+#version 400
 layout(triangles, fractional_even_spacing, ccw) in;
+#include Geodesic.TessEval.Main
+
+-- TessEval.Equal
+#version 400
+layout(triangles, equal_spacing, ccw) in;
+#include Geodesic.TessEval.Main
+
+-- TessEval.Main
 in vec3 tcPosition[];
 
 out vec3 tePosition;
 out vec3 tePatchDistance;
 out vec3 teNormal;
+out float teHeight;
 
 out vec4 FeedbackPosition;
 
 #include Geodesic.Matrices
+#include Noise.3D
 
 uniform float Radius;
 uniform float TerrainScale;
 
 float GetHeight(vec3 pos)
 {
-	float len = length(pos);
-	float yaw = asin(pos.x / len);
-	float pitch = asin(pos.y / len);
-	return sin(pitch*10) * cos(yaw*10);
+	return snoise(pos*4);
+	//float len = length(pos);
+	//float yaw = asin(pos.x / len);
+	//float pitch = asin(pos.y / len);
+	//return sin(pitch*10) * cos(yaw*10);
 }
 
 void main()
@@ -99,7 +112,8 @@ void main()
 	// write the vertex out to the transform feedback buffer
 	FeedbackPosition = vec4(tePosition, 0);
 	// scale unit sphere
-	tePosition *=  Radius + TerrainScale * GetHeight(tePosition);
+	teHeight = GetHeight(tePosition);
+	tePosition *=  Radius + TerrainScale * teHeight;
 	tePosition = (ModelMatrix * vec4(tePosition, 1)).xyz;
 	// output to geometry stage
 	tePatchDistance = gl_TessCoord;
@@ -112,6 +126,7 @@ void main()
 in vec3 tePosition;
 in vec3 teNormal;
 in vec3 tePatchDistance;
+in float teHeight;
 
 out vec4 FragColor;
 
@@ -129,6 +144,8 @@ float amplify(float d, float scale, float offset)
 
 void main()
 {
+	FragColor = vec4(teHeight, -teHeight, 0, 1);
+	return;
 	vec3 N = normalize(teNormal);
     vec3 L = normalize(LightPosition - tePosition);
     float df = max(0, dot(N, L));

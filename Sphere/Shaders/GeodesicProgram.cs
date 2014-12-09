@@ -7,12 +7,11 @@ namespace Sphere.Shaders
 {
     [VertexShaderSource("Geodesic.Vertex")]
     [TessControlShaderSource("Geodesic.TessControl")]
-    [TessEvaluationShaderSource("Geodesic.TessEval")]
     [FragmentShaderSource("Geodesic.Fragment")]
     public class GeodesicProgram
         : TransformProgram
     {
-        public GeodesicProgram()
+        protected GeodesicProgram()
         {
             FeedbackVaryings(TransformFeedbackMode.InterleavedAttribs, FeedbackPosition);
         }
@@ -32,9 +31,19 @@ namespace Sphere.Shaders
         public Uniform<Vector3> LightPosition { get; protected set; }
         public Uniform<Vector3> DiffuseMaterial { get; protected set; }
         public Uniform<Vector3> AmbientMaterial { get; protected set; }
-        
-        public Uniform<float> EdgesPerScreenHeight { get; protected set; }
+
         public Uniform<float> Radius { get; protected set; }
+        public Uniform<float> EdgesPerScreenHeight { get; protected set; }
+        public Uniform<bool> RoundTessellationLevel { get; protected set; }
         public Uniform<float> TerrainScale { get; protected set; }
     }
+
+    [TessEvaluationShaderSource("Geodesic.TessEval.Odd")]
+    public class GeodesicProgramOdd : GeodesicProgram { }
+
+    [TessEvaluationShaderSource("Geodesic.TessEval.Even")]
+    public class GeodesicProgramEven : GeodesicProgram { }
+
+    [TessEvaluationShaderSource("Geodesic.TessEval.Equal")]
+    public class GeodesicProgramEqual : GeodesicProgram { }
 }
