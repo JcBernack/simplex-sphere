@@ -23,8 +23,6 @@ namespace Sphere
 
         private float _terrainScale;
         private Icosahedron _icosahedron;
-        private BufferPod<Vector4> _feedbackBuffer;
-        private TransformFeedback _transform;
 
         private CameraBase _camera;
         private Matrix4 _modelMatrix;
@@ -35,8 +33,6 @@ namespace Sphere
         private const float ClipNear = 2;
         private const float ClipFar = 1000;
         private float _pixelsPerEdge = 30;
-        private bool _rebase;
-        private bool _drawFromFeedback;
         private float _radius;
         private float _heightScale;
 
@@ -73,27 +69,13 @@ namespace Sphere
             _program = _programOdd;
             // create icosahedron and set model matrix
             _modelMatrix = Matrix4.CreateScale(1);
-            _icosahedron = new Icosahedron();
-            // get vertices without indexing
-            var vertices = new Vector4[_icosahedron.Indices.Length];
-            for (var i = 0; i < _icosahedron.Indices.Length; i++)
-            {
-                var index = _icosahedron.Indices[i];
-                vertices[i] = new Vector4(_icosahedron.Vertices[index]);
-            }
-            // initialize feedback buffer
-            _feedbackBuffer = new BufferPod<Vector4>(); 
-            _feedbackBuffer.Init(BufferTarget.ArrayBuffer, vertices);
-            _feedbackBuffer.Resize(BufferTarget.ArrayBuffer, vertices.Length * 10000);
-            // initialize transform feedback object
-            _transform = new TransformFeedback();
-            _transform.Bind();
+            _icosahedron = new Icosahedron(4);
+            _icosahedron.UpdateBuffers();
             // bind it to an vao
             _vao = new VertexArray();
             _vao.Bind();
-            //_icosahedron.UpdateBuffers();
-            //_vao.BindElementBuffer(_icosahedron.IndexBuffer);
-            //_vao.BindAttribute(_program.Position, _icosahedron.VertexBuffer);
+            _vao.BindElementBuffer(_icosahedron.IndexBuffer);
+            _vao.BindAttribute(_program.Position, _icosahedron.VertexBuffer);
             // set some reasonable default state
             GL.ClearColor(Color4.Black);
             GL.Enable(EnableCap.DepthTest);
@@ -105,7 +87,6 @@ namespace Sphere
         private void OnUnload(object sender, EventArgs e)
         {
             _icosahedron.Dispose();
-            _feedbackBuffer.Dispose();
             GLResource.DisposeAll(this);
         }
 
@@ -125,7 +106,7 @@ namespace Sphere
 
         private void OnRender(object sender, FrameEventArgs e)
         {
-            Title = string.Format("Icosahedron tesselation level - edge length: {3} - terrain scale: {0} - FPS: {1} - eye: {2}",
+            Title = string.Format("Icosahedron tesselation - edge length: {3} - terrain scale: {0} - FPS: {1} - eye: {2}",
                 _terrainScale, FrameTimer.FpsBasedOnFramesRendered, _camera.GetEyePosition(), _pixelsPerEdge);
             _viewMatrix = Matrix4.Identity;
             _camera.ApplyCamera(ref _viewMatrix);
@@ -145,22 +126,7 @@ namespace Sphere
             _program.Radius.Set(_radius);
             _program.TerrainScale.Set(_terrainScale);
             _program.HeightScale.Set(_heightScale);
-            _vao.BindAttribute(_program.Position, _feedbackBuffer.Ping);
-            if (_rebase)
-            {
-                _transform.BindOutput(_program.FeedbackPosition, _feedbackBuffer.Pong);
-                _transform.Begin(TransformFeedbackPrimitiveType.Triangles);
-                _vao.DrawArrays(PrimitiveType.Patches, 0, _feedbackBuffer.Ping.ElementCount);
-                _transform.End();
-                _feedbackBuffer.Swap();
-                _rebase = false;
-                _drawFromFeedback = true;
-            }
-            else
-            {
-                if (_drawFromFeedback) _vao.DrawTransformFeedback(PrimitiveType.Patches, _transform);
-                else _vao.DrawArrays(PrimitiveType.Patches, 0, _feedbackBuffer.Ping.ElementCount);
-            }
+            _vao.DrawElements(PrimitiveType.Patches, _icosahedron.Indices.Length);
             SwapBuffers();
         }
 
@@ -176,7 +142,6 @@ namespace Sphere
             if (e.Key == Key.PageDown) _heightScale *= 0.9f;
             if (e.Key == Key.Home) _terrainScale *= 1.01f;
             if (e.Key == Key.End) _terrainScale *= 0.99f;
-            if (e.Key == Key.Enter) _rebase = true;
             if (e.Key == Key.F1) GL.PolygonMode(MaterialFace.FrontAndBack, PolygonMode.Fill);
             if (e.Key == Key.F2) GL.PolygonMode(MaterialFace.FrontAndBack, PolygonMode.Line);
             if (e.Key == Key.F3) _program = _programOdd;

@@ -65,5 +65,17 @@ namespace Sphere
                 9, 1, 8,
             };
         }
+
+        public Icosahedron(int tessLevel)
+            : this()
+        {
+            var tessellator = new Tessellator(_ => _.Normalize());
+            for (var i = 0; i < tessLevel; i++)
+            {
+                tessellator.Tessellate(this);
+                Vertices = tessellator.Vertices;
+                Indices = tessellator.Indices;
+            }
+        }
     }
 }

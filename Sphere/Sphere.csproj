@@ -60,6 +60,7 @@
     <Compile Include="Shaders\GeodesicProgram.cs" />
     <Compile Include="SphereWindow.cs" />
     <Compile Include="TessellationHelper.cs" />
+    <Compile Include="Tessellator.cs" />
   </ItemGroup>
   <ItemGroup>
     <ProjectReference Include="..\..\DerpGL\DerpGL\DerpGL.csproj">

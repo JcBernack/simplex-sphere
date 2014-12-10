@@ -9,17 +9,10 @@ namespace Sphere.Shaders
     [TessControlShaderSource("Geodesic.TessControl")]
     [FragmentShaderSource("Geodesic.Fragment")]
     public class GeodesicProgram
-        : TransformProgram
+        : Program
     {
-        protected GeodesicProgram()
-        {
-            FeedbackVaryings(TransformFeedbackMode.InterleavedAttribs, FeedbackPosition);
-        }
-
         [VertexAttrib(3, VertexAttribPointerType.Float)]
         public VertexAttrib Position { get; protected set; }
-
-        public TransformOut FeedbackPosition { get; protected set; }
 
         public Uniform<Matrix4> ModelMatrix { get; protected set; }
         public Uniform<Matrix4> ViewMatrix { get; protected set; }

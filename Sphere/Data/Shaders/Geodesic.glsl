@@ -84,8 +84,6 @@ out vec3 tePatchDistance;
 out vec3 teNormal;
 out float teHeight;
 
-out vec4 FeedbackPosition;
-
 #include Geodesic.Matrices
 #include Noise.3D
 
@@ -101,11 +99,9 @@ void main()
     vec3 p2 = gl_TessCoord.z * tcPosition[2];
 	tePosition = normalize(p0 + p1 + p2);
 	teNormal = NormalMatrix * tePosition;
-	// write the vertex out to the transform feedback buffer
-	FeedbackPosition = vec4(tePosition, 0);
 	// scale unit sphere
 	teHeight = snoise(tePosition * TerrainScale);
-	tePosition *=  Radius + HeightScale * teHeight;
+	tePosition *=  Radius + max(0, HeightScale * teHeight);
 	tePosition = (ModelMatrix * vec4(tePosition, 1)).xyz;
 	// output
 	tePatchDistance = gl_TessCoord;
