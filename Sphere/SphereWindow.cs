@@ -10,18 +10,32 @@ using OpenTK.Graphics;
 using OpenTK.Graphics.OpenGL;
 using OpenTK.Input;
 using Sphere.Shaders;
+using Sphere.Variables;
 
 namespace Sphere
 {
     public class SphereWindow
         : DerpWindow
     {
-        private GeodesicProgramEqual _programEqual;
+        [Variable(Key.Right, Key.Left, VariableScaling.Linear, 10)]
+        public float PixelsPerEdge = 30;
+
+        [Variable(Key.Up, Key.Down, VariableScaling.Linear, 100)]
+        public float Radius;
+
+        [Variable(Key.PageUp, Key.PageDown, VariableScaling.Linear, 50)]
+        public float HeightScale;
+
+        [Variable(Key.Home, Key.End, VariableScaling.Linear, 1)]
+        public float TerrainScale;
+
+        private readonly VariableHandler _variableHandler;
+
         private GeodesicProgramOdd _programOdd;
+        private GeodesicProgram _programEqual;
         private GeodesicProgram _program;
         private VertexArray _vao;
 
-        private float _terrainScale;
         private Icosahedron _icosahedron;
 
         private CameraBase _camera;
@@ -31,25 +45,25 @@ namespace Sphere
         private Matrix4 _projectionMatrix;
 
         private const float ClipNear = 2;
-        private const float ClipFar = 1000;
-        private float _pixelsPerEdge = 30;
-        private float _radius;
-        private float _heightScale;
+        private const float ClipFar = 2000;
 
         public SphereWindow()
             : base(800, 600, GraphicsMode.Default, "Sphere")
         {
             // disable vsync
             VSync = VSyncMode.Off;
+            // initialize variable handler
+            _variableHandler = new VariableHandler(this);
+            // kerbin radius in [km]
+            Radius = 600;
+            // highest elevation on kerbin in [km]
+            HeightScale = 6.764f;
+            TerrainScale = 2;
             // set up camera
-            _camera = new ThirdPersonCamera();
+            _camera = new ThirdPersonCamera { DefaultOrigin = new Vector3(0, Radius, 0) };
             _camera.Enable(this);
-            _camera.DefaultPosition.Z = 700;
+            _camera.DefaultPosition.Z = 1000;
             _camera.ResetToDefault();
-            // set default tesselation levels
-            _terrainScale = 1;
-            _heightScale = 1;
-            _radius = 50;
             // hook up events
             Load += OnLoad;
             Unload += OnUnload;
@@ -65,11 +79,11 @@ namespace Sphere
             WindowState = WindowState.Maximized;
             // load program
             _programOdd = ProgramFactory.Create<GeodesicProgramOdd>();
-            _programEqual = ProgramFactory.Create<GeodesicProgramEqual>();
+            _programEqual = ProgramFactory.Create<GeodesicProgram>();
             _program = _programOdd;
             // create icosahedron and set model matrix
             _modelMatrix = Matrix4.CreateScale(1);
-            _icosahedron = new Icosahedron(4);
+            _icosahedron = new Icosahedron(5);
             _icosahedron.UpdateBuffers();
             // bind it to an vao
             _vao = new VertexArray();
@@ -80,7 +94,7 @@ namespace Sphere
             GL.ClearColor(Color4.Black);
             GL.Enable(EnableCap.DepthTest);
             GL.Enable(EnableCap.CullFace);
-            GL.CullFace(CullFaceMode.Front);
+            GL.CullFace(CullFaceMode.Back);
             GL.PatchParameter(PatchParameterInt.PatchVertices, 3);
         }
 
@@ -101,31 +115,29 @@ namespace Sphere
 
         private void OnUpdate(object sender, FrameEventArgs e)
         {
+            _variableHandler.Update((float)e.Time);
             //_modelMatrix *= Matrix4.CreateRotationX((float) e.Time * 0.2f);
         }
 
         private void OnRender(object sender, FrameEventArgs e)
         {
-            Title = string.Format("Icosahedron tesselation - edge length: {3} - terrain scale: {0} - FPS: {1} - eye: {2}",
-                _terrainScale, FrameTimer.FpsBasedOnFramesRendered, _camera.GetEyePosition(), _pixelsPerEdge);
+            Title = string.Format("Icosahedron tesselation - edge length: {0} - FPS: {1} - eye: {2}",
+                PixelsPerEdge, FrameTimer.FpsBasedOnFramesRendered, _camera.GetEyePosition());
             _viewMatrix = Matrix4.Identity;
             _camera.ApplyCamera(ref _viewMatrix);
             Matrix4.Mult(ref _modelMatrix, ref _viewMatrix, out _modelViewMatrix);
             GL.Clear(ClearBufferMask.ColorBufferBit | ClearBufferMask.DepthBufferBit);
             _program.Use();
-            _program.AmbientMaterial.Set(new Vector3(0.2f, 0.2f, 0.2f));
-            _program.DiffuseMaterial.Set(new Vector3(0.25f, 0.75f, 0.75f));
-            _program.LightPosition.Set(new Vector3(0, 2000, 10));
             _program.ModelMatrix.Set(_modelMatrix);
             _program.ViewMatrix.Set(_viewMatrix);
             _program.ProjectionMatrix.Set(_projectionMatrix);
             _program.ModelViewMatrix.Set(_modelViewMatrix);
             _program.ModelViewProjectionMatrix.Set(_modelViewMatrix*_projectionMatrix);
             _program.NormalMatrix.Set(_modelMatrix.GetNormalMatrix());
-            _program.EdgesPerScreenHeight.Set(Height / _pixelsPerEdge);
-            _program.Radius.Set(_radius);
-            _program.TerrainScale.Set(_terrainScale);
-            _program.HeightScale.Set(_heightScale);
+            _program.EdgesPerScreenHeight.Set(Height / PixelsPerEdge);
+            _program.Radius.Set(Radius);
+            _program.TerrainScale.Set(TerrainScale);
+            _program.HeightScale.Set(HeightScale);
             _vao.DrawElements(PrimitiveType.Patches, _icosahedron.Indices.Length);
             SwapBuffers();
         }
@@ -134,14 +146,6 @@ namespace Sphere
         {
             if (e.Key == Key.Escape) Close();
             if (e.Key == Key.R) _camera.ResetToDefault();
-            if (e.Key == Key.Up) _radius *= 1.01f;
-            if (e.Key == Key.Down) _radius *= 0.99f;
-            if (e.Key == Key.Right) _pixelsPerEdge += 1;
-            if (e.Key == Key.Left) _pixelsPerEdge -= 1;
-            if (e.Key == Key.PageUp) _heightScale *= 1.1f;
-            if (e.Key == Key.PageDown) _heightScale *= 0.9f;
-            if (e.Key == Key.Home) _terrainScale *= 1.01f;
-            if (e.Key == Key.End) _terrainScale *= 0.99f;
             if (e.Key == Key.F1) GL.PolygonMode(MaterialFace.FrontAndBack, PolygonMode.Fill);
             if (e.Key == Key.F2) GL.PolygonMode(MaterialFace.FrontAndBack, PolygonMode.Line);
             if (e.Key == Key.F3) _program = _programOdd;
