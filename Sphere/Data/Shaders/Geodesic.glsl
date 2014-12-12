@@ -1,10 +1,10 @@
 ﻿-- Matrices
-uniform mat4 ModelMatrix;
-uniform mat4 ViewMatrix;
+//uniform mat4 ModelMatrix;
+//uniform mat4 ViewMatrix;
 uniform mat4 ProjectionMatrix;
 uniform mat4 ModelViewMatrix;
 uniform mat4 ModelViewProjectionMatrix;
-uniform mat3 NormalMatrix;
+//uniform mat3 NormalMatrix;
 
 -- Terrain
 #include Noise.3D
@@ -15,12 +15,17 @@ uniform float HeightScale;
 
 float GetTerrainHeight(vec3 unitPosition)
 {
-	return snoise(unitPosition * TerrainScale);
+	return snoise(unitPosition * TerrainScale) * 0.9 + snoise(unitPosition * TerrainScale * 6) * 0.1;
+}
+
+float GetTerrainDisplacement(float height)
+{
+	return Radius + max(0, HeightScale * height);
 }
 
 vec3 GetTerrainPosition(vec3 unitPosition)
 {
-	return unitPosition * (Radius + max(0, HeightScale * GetTerrainHeight(unitPosition)));	
+	return unitPosition * GetTerrainDisplacement(GetTerrainHeight(unitPosition));
 }
 
 -- Vertex
@@ -66,7 +71,7 @@ out TessData
 #define ID gl_InvocationID
 uniform float EdgesPerScreenHeight;
 
-// source for tessellation level calculation:
+// source for tessellation level calculation: Nvidia
 // https://developer.nvidia.com/content/dynamic-hardware-tessellation-basics
 float GetTessLevel(int index1, int index2)
 {
@@ -76,18 +81,37 @@ float GetTessLevel(int index1, int index2)
 	float D = abs(distance(p1, p2) * ProjectionMatrix[1][1] / clipPos.w);
 	return clamp(D * EdgesPerScreenHeight, 1, 64);
 }
+// source for frustrum test: OpenGL Insights
+// https://books.google.de/books?id=CCVenzOGjpcC&pg=PA150&lpg=PA150&dq=choose+tessellation+level+projected+sphere&source=bl&ots=pcp7Dmd0EL&sig=fqSwcXWM28qxhyEhGd03vG8qGFM&hl=de&sa=X&ei=wWiKVMyCCoXtUoKCg5gJ&ved=0CC8Q6AEwAQ#v=onepage&q=choose%20tessellation%20level%20projected%20sphere&f=false
+bool edgeInFrustrum(vec4 p, vec4 q)
+{
+	return !((p.x < -p.w && q.x < -q.w) || (p.x > p.w && q.x > q.w)
+		  || (p.z < -p.w && q.z < -q.w) || (p.z > p.w && q.z > q.w));
+}
 
 void main()
 {
-	// copy over control points
+	// copy over patch points
 	outs[ID].unitPosition = ins[ID].unitPosition;
+	// continue only with the first invocation per patch
+	if (ID > 0) return;
 	// determine tesselation level
-	if (ID == 0)
+	vec4 p0 = ProjectionMatrix * vec4(ins[0].terrainPosition, 1);
+	vec4 p1 = ProjectionMatrix * vec4(ins[1].terrainPosition, 1);
+	vec4 p2 = ProjectionMatrix * vec4(ins[2].terrainPosition, 1);
+	if (edgeInFrustrum(p0, p1) || edgeInFrustrum(p1, p2) || edgeInFrustrum(p2, p0))
 	{
 		gl_TessLevelOuter[0] = GetTessLevel(1, 2);
 		gl_TessLevelOuter[1] = GetTessLevel(2, 0);
 		gl_TessLevelOuter[2] = GetTessLevel(0, 1);
 		gl_TessLevelInner[0] = max(max(gl_TessLevelOuter[0], gl_TessLevelOuter[1]), gl_TessLevelOuter[2]);
+	}
+	else
+	{
+		gl_TessLevelOuter[0] = 0;
+		gl_TessLevelOuter[1] = 0;
+		gl_TessLevelOuter[2] = 0;
+		gl_TessLevelInner[0] = 0;
 	}
 }
 
@@ -129,7 +153,7 @@ void main()
 	vec3 p = normalize(p0 + p1 + p2);
 	// calculate point on terrain
 	outs.height = GetTerrainHeight(p);
-	gl_Position = ModelViewProjectionMatrix * vec4(GetTerrainPosition(p), 1);
+	gl_Position = ModelViewProjectionMatrix * vec4(p * GetTerrainDisplacement(outs.height), 1);
 }
 
 -- Fragment
