@@ -10,15 +10,15 @@ namespace Sphere
         public Vector3[] Vertices { get { return _vertices.ToArray(); } }
         public uint[] Indices { get { return _indices.ToArray(); } }
 
-        public Action<Vector3> VertexHandler;
+        public Func<Vector3, Vector3> EvaluationHandler;
 
         private Dictionary<Vector3, uint> _vertexIndices;
         private List<Vector3> _vertices;
         private List<uint> _indices;
 
-        public Tessellator(Action<Vector3> vertexHandler)
+        public Tessellator(Func<Vector3, Vector3> evaluationHandler)
         {
-            VertexHandler = vertexHandler;
+            EvaluationHandler = evaluationHandler;
         }
 
         private void Reset()
@@ -62,8 +62,12 @@ namespace Sphere
                 AddFace(v31, v12, v23);
                 AddFace(v31, v23, v3);
             }
-            // call handler for each vertex
-            if (VertexHandler != null) _vertices.ForEach(VertexHandler);
+            // call evaluation handler for each vertex
+            if (EvaluationHandler == null) return;
+            for (var i = 0; i < _vertices.Count; i++)
+            {
+                _vertices[i] = EvaluationHandler(_vertices[i]);
+            }
         }
 
         /// <summary>

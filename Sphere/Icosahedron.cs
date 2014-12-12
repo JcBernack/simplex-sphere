@@ -69,7 +69,7 @@ namespace Sphere
         public Icosahedron(int tessLevel)
             : this()
         {
-            var tessellator = new Tessellator(_ => _.Normalize());
+            var tessellator = new Tessellator(_ => _.Normalized());
             for (var i = 0; i < tessLevel; i++)
             {
                 tessellator.Tessellate(this);
