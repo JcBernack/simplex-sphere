@@ -39,6 +39,7 @@
       <SubType>Designer</SubType>
     </None>
     <None Include="Data\Shaders\Noise.glsl" />
+    <None Include="Data\Shaders\Shading.glsl" />
     <None Include="packages.config" />
     <None Include="Data\Shaders\Geodesic.glsl" />
   </ItemGroup>
@@ -55,8 +56,11 @@
     <Reference Include="System.Drawing" />
   </ItemGroup>
   <ItemGroup>
+    <Compile Include="DeferredRenderer.cs" />
+    <Compile Include="GBuffer.cs" />
     <Compile Include="Icosahedron.cs" />
     <Compile Include="Properties\AssemblyInfo.cs" />
+    <Compile Include="Shaders\DirectionalLightProgram.cs" />
     <Compile Include="Shaders\GeodesicProgram.cs" />
     <Compile Include="SphereWindow.cs" />
     <Compile Include="TessellationHelper.cs" />

@@ -1,6 +1,6 @@
 ﻿-- Matrices
-//uniform mat4 ModelMatrix;
-//uniform mat4 ViewMatrix;
+uniform mat4 ModelMatrix;
+uniform mat4 ViewMatrix;
 uniform mat4 ProjectionMatrix;
 uniform mat4 ModelViewMatrix;
 uniform mat4 ModelViewProjectionMatrix;
@@ -15,6 +15,7 @@ uniform float HeightScale;
 
 float GetTerrainHeight(vec3 unitPosition)
 {
+	//return snoise(unitPosition * TerrainScale);
 	return snoise(unitPosition * TerrainScale) * 0.9 + snoise(unitPosition * TerrainScale * 6) * 0.1;
 }
 
@@ -138,7 +139,8 @@ in TessData
 
 out FragmentData
 {
-	float height;
+	smooth vec4 position;
+	smooth float height;
 } outs;
 
 #include Geodesic.Matrices
@@ -153,7 +155,9 @@ void main()
 	vec3 p = normalize(p0 + p1 + p2);
 	// calculate point on terrain
 	outs.height = GetTerrainHeight(p);
-	gl_Position = ModelViewProjectionMatrix * vec4(p * GetTerrainDisplacement(outs.height), 1);
+	vec4 pos = vec4(p * GetTerrainDisplacement(outs.height), 1);
+	outs.position = ModelMatrix * pos / Radius;
+	gl_Position = ModelViewProjectionMatrix * pos;
 }
 
 -- Fragment
@@ -161,10 +165,14 @@ void main()
 
 in FragmentData
 {
-	float height;
+	smooth vec4 position;
+	smooth float height;
 } ins;
 
-out vec4 FragColor;
+layout (location = 0) out vec4 Position;
+layout (location = 1) out vec4 Diffuse;
+layout (location = 2) out vec4 Normal;
+layout (location = 3) out vec4 TexCoord;
 
 const int NumColors = 7;
 const float Steps[] = float[NumColors](-1, -0.25, 0, 0.0625, 0.125, /*0.375,*/ 0.75, 0.9);
@@ -182,12 +190,20 @@ const vec3 Colors[] = vec3[NumColors](
 void main()
 {
 	// mix colors for different heights
+	//TODO: move color calculation to deferred shading pass
 	float x = ins.height;
 	vec3 color = mix(Colors[0], Colors[1], smoothstep(Steps[0], Steps[1], x));
 	for (int i = 2; i < NumColors; i++)
 	{
 		color = mix(color, Colors[i], smoothstep(Steps[i-1], Steps[i], x));
 	}
-	// set fragment color
-	FragColor = vec4(color, 1.0);
+	// approximate normal
+	vec3 X = dFdx(ins.position.xyz);
+	vec3 Y = dFdy(ins.position.xyz);
+	Normal = vec4(normalize(cross(X,Y)), 1);
+	// output into gbuffer
+	Position = ins.position;
+	Diffuse = vec4(color, 1.0);
+	//Normal = vec4(0);
+	TexCoord = vec4((x+1)/2);
 }

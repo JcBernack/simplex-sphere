@@ -34,9 +34,11 @@ namespace Sphere
         private GeodesicProgramOdd _programOdd;
         private GeodesicProgram _programEqual;
         private GeodesicProgram _program;
+        
         private VertexArray _vao;
-
         private Icosahedron _icosahedron;
+
+        private DeferredRenderer _deferredRenderer;
 
         private CameraBase _camera;
         private Matrix4 _modelMatrix;
@@ -60,10 +62,18 @@ namespace Sphere
             HeightScale = 6.764f;
             TerrainScale = 2;
             // set up camera
-            _camera = new ThirdPersonCamera { DefaultOrigin = new Vector3(0, Radius, 0) };
+            //_camera = new ThirdPersonCamera { DefaultOrigin = new Vector3(0, Radius, 0) };
+            _camera = new ThirdPersonCamera();
             _camera.Enable(this);
             _camera.DefaultPosition.Z = 1000;
             _camera.ResetToDefault();
+            // test values
+            //_camera.DefaultPosition.Z = 150;
+            //_camera.DefaultPitch = 0.32f;
+            //_camera.DefaultYaw = 2.75f;
+            //_camera.ResetToDefault();
+            HeightScale = 22;
+            TerrainScale = 3.0001f;
             // hook up events
             Load += OnLoad;
             Unload += OnUnload;
@@ -96,6 +106,8 @@ namespace Sphere
             GL.Enable(EnableCap.CullFace);
             GL.CullFace(CullFaceMode.Back);
             GL.PatchParameter(PatchParameterInt.PatchVertices, 3);
+            // lighting stuff
+            _deferredRenderer = new DeferredRenderer();
         }
 
         private void OnUnload(object sender, EventArgs e)
@@ -108,6 +120,8 @@ namespace Sphere
         {
             // adjust the viewport
             GL.Viewport(ClientSize);
+            // resize G buffer
+            _deferredRenderer.Resize(Width, Height);
             // adjust the projection matrix
             var aspectRatio = Width / (float)Height;
             _projectionMatrix = Matrix4.CreatePerspectiveFieldOfView(MathHelper.PiOver4, aspectRatio, ClipNear, ClipFar);
@@ -126,7 +140,8 @@ namespace Sphere
             _viewMatrix = Matrix4.Identity;
             _camera.ApplyCamera(ref _viewMatrix);
             Matrix4.Mult(ref _modelMatrix, ref _viewMatrix, out _modelViewMatrix);
-            GL.Clear(ClearBufferMask.ColorBufferBit | ClearBufferMask.DepthBufferBit);
+            
+            // geometry pass
             _program.Use();
             _program.ModelMatrix.Set(_modelMatrix);
             _program.ViewMatrix.Set(_viewMatrix);
@@ -138,7 +153,17 @@ namespace Sphere
             _program.Radius.Set(Radius);
             _program.TerrainScale.Set(TerrainScale);
             _program.HeightScale.Set(HeightScale);
+            
+            _deferredRenderer.BeginGeometryPass();
+            _vao.Bind();
             _vao.DrawElements(PrimitiveType.Patches, _icosahedron.Indices.Length);
+            _deferredRenderer.EndGeometryPass();
+            
+            _deferredRenderer.BeginLightPass();
+            _deferredRenderer.DirectionalLight();
+            _deferredRenderer.EndLightPass();
+
+            //_deferredRenderer.DrawGBuffer();
             SwapBuffers();
         }
 
@@ -146,8 +171,8 @@ namespace Sphere
         {
             if (e.Key == Key.Escape) Close();
             if (e.Key == Key.R) _camera.ResetToDefault();
-            if (e.Key == Key.F1) GL.PolygonMode(MaterialFace.FrontAndBack, PolygonMode.Fill);
-            if (e.Key == Key.F2) GL.PolygonMode(MaterialFace.FrontAndBack, PolygonMode.Line);
+            //if (e.Key == Key.F1) GL.PolygonMode(MaterialFace.FrontAndBack, PolygonMode.Fill);
+            //if (e.Key == Key.F2) GL.PolygonMode(MaterialFace.FrontAndBack, PolygonMode.Line);
             if (e.Key == Key.F3) _program = _programOdd;
             if (e.Key == Key.F4) _program = _programEqual;
             if (e.Key == Key.F5 || e.Key == Key.F6)
