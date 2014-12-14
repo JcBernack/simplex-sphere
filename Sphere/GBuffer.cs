@@ -24,7 +24,7 @@ namespace Sphere
         private readonly int _width;
         private readonly int _height;
 
-        private readonly FrameBuffer _fbo;
+        private readonly Framebuffer _fbo;
         private readonly Dictionary<GBufferType, Texture2D> _textures;
         private readonly Texture2D _depthTexture;
 
@@ -32,7 +32,7 @@ namespace Sphere
         {
             _width = width;
             _height = height;
-            _fbo = new FrameBuffer();
+            _fbo = new Framebuffer();
             _textures = new Dictionary<GBufferType, Texture2D>();
             _fbo.Bind(FramebufferTarget.Framebuffer);
             // add depth texture
@@ -53,7 +53,7 @@ namespace Sphere
             GL.DrawBuffers(attachments.Count, attachments.ToArray());
             // check if everything went ok
             _fbo.CheckState(FramebufferTarget.Framebuffer);
-            FrameBuffer.Unbind(FramebufferTarget.Framebuffer);
+            Framebuffer.Unbind(FramebufferTarget.Framebuffer);
         }
 
         public void DrawBuffer(GBufferType buffer)
@@ -67,7 +67,7 @@ namespace Sphere
         public void DumpToScreen()
         {
             // make sure the default framebuffer is bound and cleared
-            FrameBuffer.Unbind(FramebufferTarget.Framebuffer);
+            Framebuffer.Unbind(FramebufferTarget.Framebuffer);
             GL.Clear(ClearBufferMask.ColorBufferBit | ClearBufferMask.DepthBufferBit);
             // bind the framebuffer for reading
             Bind(FramebufferTarget.ReadFramebuffer);
@@ -93,7 +93,7 @@ namespace Sphere
 
         public void Unbind(FramebufferTarget target)
         {
-            FrameBuffer.Unbind(target);
+            Framebuffer.Unbind(target);
         }
 
         private void SetReadBuffer(GBufferType buffer)
