@@ -1,5 +1,7 @@
 using System;
 using System.Collections.Generic;
+using System.Linq;
+using DerpGL;
 using DerpGL.Buffers;
 using DerpGL.Textures;
 using OpenTK;
@@ -20,13 +22,14 @@ namespace Sphere
     /// TODO: properly dispose GL resources
     /// </summary>
     public class GBuffer
+        : GLResource
     {
         private readonly int _width;
         private readonly int _height;
 
         private readonly Framebuffer _fbo;
-        private readonly Dictionary<GBufferType, Texture2D> _textures;
         private readonly Texture2D _depthTexture;
+        private readonly Dictionary<GBufferType, Texture2D> _textures;
 
         public GBuffer(int width, int height)
         {
@@ -54,6 +57,14 @@ namespace Sphere
             // check if everything went ok
             _fbo.CheckState(FramebufferTarget.Framebuffer);
             Framebuffer.Unbind(FramebufferTarget.Framebuffer);
+        }
+
+        protected override void Dispose(bool manual)
+        {
+            if (!manual) return;
+            _fbo.Dispose();
+            _depthTexture.Dispose();
+            _textures.Values.ToList().ForEach(_ => _.Dispose());
         }
 
         public void DrawBuffer(GBufferType buffer)

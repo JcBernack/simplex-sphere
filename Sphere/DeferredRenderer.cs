@@ -1,3 +1,4 @@
+using DerpGL;
 using DerpGL.Buffers;
 using DerpGL.Shaders;
 using DerpGL.Shapes;
@@ -8,6 +9,7 @@ using Sphere.Shaders;
 namespace Sphere
 {
     public class DeferredRenderer
+        : GLResource
     {
         private readonly DirectionalLightProgram _lightProgram;
         private readonly VertexArray _vaoFullScreenQuad;
@@ -25,9 +27,14 @@ namespace Sphere
             _vaoFullScreenQuad.BindAttribute(_lightProgram.Position, _quad.VertexBuffer);
         }
 
+        protected override void Dispose(bool manual)
+        {
+            DisposeAll(this);
+        }
+
         public void Resize(int width, int height)
         {
-            //if (_gbuffer != null) _gbuffer.Dispose();
+            if (_gbuffer != null) _gbuffer.Dispose();
             _gbuffer = new GBuffer(width, height);
         }
 
