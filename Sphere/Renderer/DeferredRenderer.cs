@@ -6,7 +6,7 @@ using OpenTK;
 using OpenTK.Graphics.OpenGL;
 using Sphere.Shaders;
 
-namespace Sphere
+namespace Sphere.Renderer
 {
     public class DeferredRenderer
         : GLResource
@@ -71,22 +71,6 @@ namespace Sphere
             GL.Enable(EnableCap.DepthTest);
         }
 
-        /// <summary>
-        /// Base light properties:
-        /// vec3 Color
-        /// float AmbientIntensity
-        /// float DiffuseIntensity
-        /// 
-        /// Directional light properties:
-        /// vec3 Direction
-        /// 
-        /// Material properties:
-        /// float SpecularIntensity
-        /// float SpecularPower (material or global?)
-        /// 
-        /// Required data:
-        /// vec3 EyeWorldPosition
-        /// </summary>
         public void DrawDirectionalLight(Vector3 eyePosition, DirectionalLight light)
         {
             _directionalProgram.Use();
@@ -101,23 +85,6 @@ namespace Sphere
             // draw fullscreen quad
             _vaoFullScreenQuad.Bind();
             _vaoFullScreenQuad.DrawArrays(_quad.DefaultMode, 0, _quad.Vertices.Length);
-        }
-
-        public struct DirectionalLight
-        {
-            public Vector3 Direction;
-            public Vector3 Color;
-            public float AmbientIntensity;
-            public float DiffuseIntensity;
-        }
-
-        public struct PointLight
-        {
-            public Vector3 Position;
-            public Vector3 Attenuation;
-            public Vector3 Color;
-            public float AmbientIntensity;
-            public float DiffuseIntensity;
         }
 
         public void DrawPointLight(Vector3 eyePosition, PointLight light)

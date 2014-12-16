@@ -26,6 +26,8 @@ namespace Sphere.Shaders
         public Uniform<float> EdgesPerScreenHeight { get; protected set; }
         public Uniform<float> TerrainScale { get; protected set; }
         public Uniform<float> HeightScale { get; protected set; }
+        
+        public Uniform<bool> EnableWireframe { get; protected set; }
 
         //public FragData FragColor { get; protected set; }
         //public FragData Bla1 { get; protected set; }

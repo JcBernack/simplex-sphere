@@ -9,6 +9,7 @@ using OpenTK;
 using OpenTK.Graphics;
 using OpenTK.Graphics.OpenGL;
 using OpenTK.Input;
+using Sphere.Renderer;
 using Sphere.Shaders;
 using Sphere.Variables;
 
@@ -45,6 +46,8 @@ namespace Sphere
         private Matrix4 _viewMatrix;
         private Matrix4 _modelViewMatrix;
         private Matrix4 _projectionMatrix;
+        private bool _fixedTessellation;
+        private bool _enableWireframe;
 
         private const float ClipNear = 2;
         private const float ClipFar = 2000;
@@ -103,8 +106,9 @@ namespace Sphere
             // set some reasonable default state
             GL.ClearColor(Color4.Black);
             GL.Enable(EnableCap.DepthTest);
-            GL.Enable(EnableCap.CullFace);
-            GL.CullFace(CullFaceMode.Back);
+            // backface culling is done in the tesselation control shader
+            //GL.Enable(EnableCap.CullFace);
+            //GL.CullFace(CullFaceMode.Back);
             GL.PatchParameter(PatchParameterInt.PatchVertices, 3);
             // lighting stuff
             _deferredRenderer = new DeferredRenderer();
@@ -139,7 +143,7 @@ namespace Sphere
                 PixelsPerEdge, FrameTimer.FpsBasedOnFramesRendered, _camera.GetEyePosition());
             _viewMatrix = Matrix4.Identity;
             _camera.ApplyCamera(ref _viewMatrix);
-            Matrix4.Mult(ref _modelMatrix, ref _viewMatrix, out _modelViewMatrix);
+            if (!_fixedTessellation) Matrix4.Mult(ref _modelMatrix, ref _viewMatrix, out _modelViewMatrix);
             
             // geometry pass
             _program.Use();
@@ -147,12 +151,13 @@ namespace Sphere
             _program.ViewMatrix.Set(_viewMatrix);
             _program.ProjectionMatrix.Set(_projectionMatrix);
             _program.ModelViewMatrix.Set(_modelViewMatrix);
-            _program.ModelViewProjectionMatrix.Set(_modelViewMatrix*_projectionMatrix);
+            _program.ModelViewProjectionMatrix.Set(_modelMatrix*_viewMatrix*_projectionMatrix);
             _program.NormalMatrix.Set(_modelMatrix.GetNormalMatrix());
             _program.EdgesPerScreenHeight.Set(Height / PixelsPerEdge);
             _program.Radius.Set(Radius);
             _program.TerrainScale.Set(TerrainScale);
             _program.HeightScale.Set(HeightScale);
+            _program.EnableWireframe.Set(_enableWireframe);
             
             _deferredRenderer.BeginGeometryPass();
             _vao.Bind();
@@ -161,15 +166,15 @@ namespace Sphere
             
             _deferredRenderer.BeginLightPass();
             var eye = _camera.GetEyePosition();
-            var dirLight = new DeferredRenderer.DirectionalLight
+            var dirLight = new DirectionalLight
             {
                 Direction = new Vector3(0,-1,0),
                 Color = new Vector3(1),
-                AmbientIntensity = 0.0f,
+                AmbientIntensity = 0.1f,
                 DiffuseIntensity = 0.5f
             };
             _deferredRenderer.DrawDirectionalLight(eye, dirLight);
-            var light = new DeferredRenderer.PointLight
+            var light = new PointLight
             {
                 Position = new Vector3(0, 0, Radius + HeightScale * (1.5f + 0.5f*MathF.Sin((float)(FrameTimer.TimeRunning / 500)))),
                 Attenuation = new Vector3(0, 0.1f, 0.1f),
@@ -177,10 +182,10 @@ namespace Sphere
                 AmbientIntensity = 100,
                 DiffuseIntensity = 100
             };
-            for (int i = 0; i < 8; i++)
+            var rot = Matrix3.CreateRotationY(MathF.PI / 4);
+            for (var i = 0; i < 2; i++)
             {
                 _deferredRenderer.DrawPointLight(eye, light);
-                var rot = Matrix3.CreateRotationY(MathF.PI / 4);
                 Vector3.Transform(ref light.Position, ref rot, out light.Position);
             }
             _deferredRenderer.EndLightPass();
@@ -193,8 +198,8 @@ namespace Sphere
         {
             if (e.Key == Key.Escape) Close();
             if (e.Key == Key.R) _camera.ResetToDefault();
-            //if (e.Key == Key.F1) GL.PolygonMode(MaterialFace.FrontAndBack, PolygonMode.Fill);
-            //if (e.Key == Key.F2) GL.PolygonMode(MaterialFace.FrontAndBack, PolygonMode.Line);
+            if (e.Key == Key.T) _fixedTessellation = !_fixedTessellation;
+            if (e.Key == Key.F1) _enableWireframe = !_enableWireframe;
             if (e.Key == Key.F3) _program = _programOdd;
             if (e.Key == Key.F4) _program = _programEqual;
             if (e.Key == Key.F5 || e.Key == Key.F6)

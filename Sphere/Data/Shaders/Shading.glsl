@@ -29,7 +29,7 @@ layout(std140) uniform MaterialBuffer
 	MaterialObject Material[MAX_MATERIALS_OBJECTS];
 };
 */
-//TODO: add uniform buffer with light information
+//TODO: refactor light information to be provided with uniform buffers
 //TODO: generalize and support multiple materials
 uniform float MaterialSpecularIntensity = 0.0;
 uniform float MaterialSpecularPower = 0.0;
