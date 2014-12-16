@@ -156,7 +156,7 @@ void main()
 	// calculate point on terrain
 	outs.height = GetTerrainHeight(p);
 	vec4 pos = vec4(p * GetTerrainDisplacement(outs.height), 1);
-	outs.position = ModelMatrix * pos / Radius;
+	outs.position = ModelMatrix * pos;
 	gl_Position = ModelViewProjectionMatrix * pos;
 }
 

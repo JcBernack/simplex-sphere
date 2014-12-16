@@ -65,7 +65,7 @@ namespace Sphere
             //_camera = new ThirdPersonCamera { DefaultOrigin = new Vector3(0, Radius, 0) };
             _camera = new ThirdPersonCamera();
             _camera.Enable(this);
-            _camera.DefaultPosition.Z = 1000;
+            _camera.DefaultPosition.Z = 1600;
             _camera.ResetToDefault();
             // test values
             //_camera.DefaultPosition.Z = 150;
@@ -160,10 +160,32 @@ namespace Sphere
             _deferredRenderer.EndGeometryPass();
             
             _deferredRenderer.BeginLightPass();
-            _deferredRenderer.DirectionalLight();
+            var eye = _camera.GetEyePosition();
+            var dirLight = new DeferredRenderer.DirectionalLight
+            {
+                Direction = new Vector3(0,-1,0),
+                Color = new Vector3(1),
+                AmbientIntensity = 0.0f,
+                DiffuseIntensity = 0.5f
+            };
+            _deferredRenderer.DrawDirectionalLight(eye, dirLight);
+            var light = new DeferredRenderer.PointLight
+            {
+                Position = new Vector3(0, 0, Radius + HeightScale * (1.5f + 0.5f*MathF.Sin((float)(FrameTimer.TimeRunning / 500)))),
+                Attenuation = new Vector3(0, 0.1f, 0.1f),
+                Color = new Vector3(1),
+                AmbientIntensity = 100,
+                DiffuseIntensity = 100
+            };
+            for (int i = 0; i < 8; i++)
+            {
+                _deferredRenderer.DrawPointLight(eye, light);
+                var rot = Matrix3.CreateRotationY(MathF.PI / 4);
+                Vector3.Transform(ref light.Position, ref rot, out light.Position);
+            }
             _deferredRenderer.EndLightPass();
 
-            //_deferredRenderer.DrawGBuffer();
+            //_deferredRenderer.DrawGBuffer(GBufferType.Position);
             SwapBuffers();
         }
 

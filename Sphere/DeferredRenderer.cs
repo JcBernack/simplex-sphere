@@ -11,7 +11,8 @@ namespace Sphere
     public class DeferredRenderer
         : GLResource
     {
-        private readonly DirectionalLightProgram _lightProgram;
+        private readonly DirectionalLightProgram _directionalProgram;
+        private readonly PointLightProgram _pointProgram;
         private readonly VertexArray _vaoFullScreenQuad;
         private readonly Quad _quad;
 
@@ -19,12 +20,13 @@ namespace Sphere
 
         public DeferredRenderer()
         {
-            _lightProgram = ProgramFactory.Create<DirectionalLightProgram>();
+            _directionalProgram = ProgramFactory.Create<DirectionalLightProgram>();
+            _pointProgram = ProgramFactory.Create<PointLightProgram>();
             _quad = new Quad();
             _quad.UpdateBuffers();
             _vaoFullScreenQuad = new VertexArray();
             _vaoFullScreenQuad.Bind();
-            _vaoFullScreenQuad.BindAttribute(_lightProgram.Position, _quad.VertexBuffer);
+            _vaoFullScreenQuad.BindAttribute(_directionalProgram.Position, _quad.VertexBuffer);
         }
 
         protected override void Dispose(bool manual)
@@ -69,11 +71,68 @@ namespace Sphere
             GL.Enable(EnableCap.DepthTest);
         }
 
-        public void DirectionalLight()
+        /// <summary>
+        /// Base light properties:
+        /// vec3 Color
+        /// float AmbientIntensity
+        /// float DiffuseIntensity
+        /// 
+        /// Directional light properties:
+        /// vec3 Direction
+        /// 
+        /// Material properties:
+        /// float SpecularIntensity
+        /// float SpecularPower (material or global?)
+        /// 
+        /// Required data:
+        /// vec3 EyeWorldPosition
+        /// </summary>
+        public void DrawDirectionalLight(Vector3 eyePosition, DirectionalLight light)
         {
-            _lightProgram.Use();
-            _lightProgram.ModelViewProjectionMatrix.Set(Matrix4.Identity);
-            _gbuffer.BindBuffers(_lightProgram);
+            _directionalProgram.Use();
+            _directionalProgram.ModelViewProjectionMatrix.Set(Matrix4.Identity);
+            _directionalProgram.EyePosition.Set(eyePosition);
+            // set light properties
+            _directionalProgram.LightDirection.Set(light.Direction);
+            _directionalProgram.LightColor.Set(light.Color);
+            _directionalProgram.AmbientIntensity.Set(light.AmbientIntensity);
+            _directionalProgram.DiffuseIntensity.Set(light.DiffuseIntensity);
+            _gbuffer.BindBuffers(_directionalProgram);
+            // draw fullscreen quad
+            _vaoFullScreenQuad.Bind();
+            _vaoFullScreenQuad.DrawArrays(_quad.DefaultMode, 0, _quad.Vertices.Length);
+        }
+
+        public struct DirectionalLight
+        {
+            public Vector3 Direction;
+            public Vector3 Color;
+            public float AmbientIntensity;
+            public float DiffuseIntensity;
+        }
+
+        public struct PointLight
+        {
+            public Vector3 Position;
+            public Vector3 Attenuation;
+            public Vector3 Color;
+            public float AmbientIntensity;
+            public float DiffuseIntensity;
+        }
+
+        public void DrawPointLight(Vector3 eyePosition, PointLight light)
+        {
+            _pointProgram.Use();
+            _pointProgram.ModelViewProjectionMatrix.Set(Matrix4.Identity);
+            _pointProgram.EyePosition.Set(eyePosition);
+            // set light properties
+            _pointProgram.LightPosition.Set(light.Position);
+            _pointProgram.Attenuation.Set(light.Attenuation);
+            _pointProgram.LightColor.Set(light.Color);
+            _pointProgram.AmbientIntensity.Set(light.AmbientIntensity);
+            _pointProgram.DiffuseIntensity.Set(light.DiffuseIntensity);
+            // bind gbuffer
+            _gbuffer.BindBuffers(_pointProgram);
             // draw fullscreen quad
             _vaoFullScreenQuad.Bind();
             _vaoFullScreenQuad.DrawArrays(_quad.DefaultMode, 0, _quad.Vertices.Length);
