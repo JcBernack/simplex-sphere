@@ -8,16 +8,8 @@ using OpenTK;
 using OpenTK.Graphics.OpenGL;
 using Sphere.Shaders;
 
-namespace Sphere
+namespace Sphere.Renderer
 {
-    public enum GBufferType
-    {
-        Position,
-        Diffuse,
-        Normal,
-        TexCoord
-    }
-
     /// <summary>
     /// TODO: properly dispose GL resources
     /// </summary>
@@ -88,11 +80,11 @@ namespace Sphere
             var h2 = h / 2;
             SetReadBuffer(GBufferType.Position);
             GL.BlitFramebuffer(0, 0, w, h, 0, 0, w2, h2, ClearBufferMask.ColorBufferBit, BlitFramebufferFilter.Linear);
-            SetReadBuffer(GBufferType.Diffuse);
-            GL.BlitFramebuffer(0, 0, w, h, w2, 0, w, h2, ClearBufferMask.ColorBufferBit, BlitFramebufferFilter.Linear);
             SetReadBuffer(GBufferType.Normal);
+            GL.BlitFramebuffer(0, 0, w, h, w2, 0, w, h2, ClearBufferMask.ColorBufferBit, BlitFramebufferFilter.Linear);
+            SetReadBuffer(GBufferType.Diffuse);
             GL.BlitFramebuffer(0, 0, w, h, 0, h2, w2, h, ClearBufferMask.ColorBufferBit, BlitFramebufferFilter.Linear);
-            SetReadBuffer(GBufferType.TexCoord);
+            SetReadBuffer(GBufferType.Aux);
             GL.BlitFramebuffer(0, 0, w, h, w2, h2, w, h, ClearBufferMask.ColorBufferBit, BlitFramebufferFilter.Linear);
             Unbind(FramebufferTarget.ReadFramebuffer);
         }
@@ -117,9 +109,9 @@ namespace Sphere
         {
             program.InverseScreenSize.Set(new Vector2(1f / _width, 1f / _height));
             program.GPosition.BindTexture(TextureUnit.Texture0, _textures[GBufferType.Position]);
-            program.GDiffuse.BindTexture(TextureUnit.Texture1, _textures[GBufferType.Diffuse]);
-            program.GNormal.BindTexture(TextureUnit.Texture2, _textures[GBufferType.Normal]);
-            program.GTexCoord.BindTexture(TextureUnit.Texture3, _textures[GBufferType.TexCoord]);
+            program.GNormal.BindTexture(TextureUnit.Texture1, _textures[GBufferType.Normal]);
+            program.GDiffuse.BindTexture(TextureUnit.Texture2, _textures[GBufferType.Diffuse]);
+            program.GAux.BindTexture(TextureUnit.Texture3, _textures[GBufferType.Aux]);
         }
     }
 }

@@ -13,37 +13,47 @@ uniform float Radius;
 uniform float TerrainScale;
 uniform float HeightScale;
 
-const int NumOctaves = 4;
-const vec2 Octaves[] = vec2[NumOctaves](
-	vec2(1, 1),
-	vec2(2.312, 0.5),
-	vec2(5.741, 0.25),
-	vec2(12.384, 0.125)
-);
+//const int NumOctaves = 4;
+//const vec2 Octaves[] = vec2[NumOctaves](
+//	vec2(1, 1),
+//	vec2(2.312, 0.5),
+//	vec2(5.741, 0.25),
+//	vec2(12.384, 0.125)
+//);
 
-float GetTerrainHeight(vec3 unitPosition)
+//float GetTerrainHeight(vec3 unitPosition)
+//{
+//	vec3 p = unitPosition * TerrainScale;
+//	float n = 0;
+//	float range = 0;
+//	for (int i = 0; i < NumOctaves; i++)
+//	{
+//		n += snoise(p * Octaves[i].x) * Octaves[i].y;
+//		range += Octaves[i].y;
+//	}
+//	return n / range;
+//}
+
+//TODO: maybe add back the height cutoff: max(0, HeightScale * height)
+
+float GetTerrain(vec3 unitPosition, out vec3 terrainPosition, out vec3 gradient)
 {
-	//return snoise(unitPosition * TerrainScale);
-	vec3 p = unitPosition * TerrainScale;
-	float n = 0;
-	float range = 0;
-	for (int i = 0; i < NumOctaves; i++)
-	{
-		n += snoise(p * Octaves[i].x) * Octaves[i].y;
-		range += Octaves[i].y;
-	}
-	//float n = snoise(p) + snoise(p * 2.312) * 0.5 + snoise(p * 5.74) * 0.25;
-	return n / range;
+	float height = snoise(unitPosition * TerrainScale, gradient);
+	terrainPosition = unitPosition * (Radius + HeightScale * height);
+	return height;
 }
 
-float GetTerrainDisplacement(float height)
+vec3 GetTerrain(vec3 unitPosition)
 {
-	return Radius + max(0, HeightScale * height);
+	return unitPosition * (Radius + HeightScale * snoise(unitPosition * TerrainScale));
 }
 
-vec3 GetTerrainPosition(vec3 unitPosition)
+vec3 GetNormal(vec3 unitPosition, vec3 gradient)
 {
-	return unitPosition * GetTerrainDisplacement(GetTerrainHeight(unitPosition));
+	// gradient projected into the tangent-plane of the sphere in point p
+	vec3 h = gradient - dot(gradient, unitPosition) * unitPosition;
+	// normal on displaced sphere surface
+	return normalize(unitPosition - HeightScale * h);
 }
 
 -- Vertex
@@ -65,7 +75,7 @@ void main()
 	// pass through the unit sphere vertex
 	outs.unitPosition = Position;
 	// calculate terrain vertex to improve tessellation level
-	outs.terrainPosition = (ModelViewMatrix * vec4(GetTerrainPosition(Position), 1)).xyz;
+	outs.terrainPosition = (ModelViewMatrix * vec4(GetTerrain(Position), 1)).xyz;
 }
 
 -- TessControl
@@ -165,26 +175,33 @@ in TessData
 
 out FragmentData
 {
-	smooth vec4 position;
+	smooth vec3 position;
 	smooth float height;
+	smooth vec3 gradient;
 	smooth vec3 tessCoord;
 } outs;
 
 #include Geodesic.Matrices
 #include Geodesic.Terrain
 
+vec3 GetTessPos(vec3 coords)
+{
+	vec3 p0 = coords.x * ins[0].unitPosition;
+    vec3 p1 = coords.y * ins[1].unitPosition;
+    vec3 p2 = coords.z * ins[2].unitPosition;
+	return normalize(p0 + p1 + p2);
+}
+
 void main()
 {
-	// calculate new point on the unit sphere
+	// output the barycentric coordinates to render the wireframe in the fragment shader
 	outs.tessCoord = gl_TessCoord;
-    vec3 p0 = gl_TessCoord.x * ins[0].unitPosition;
-    vec3 p1 = gl_TessCoord.y * ins[1].unitPosition;
-    vec3 p2 = gl_TessCoord.z * ins[2].unitPosition;
-	vec3 p = normalize(p0 + p1 + p2);
+	// calculate new point on the unit sphere
+	vec3 x = GetTessPos(gl_TessCoord);
 	// calculate point on terrain
-	outs.height = GetTerrainHeight(p);
-	vec4 pos = vec4(p * GetTerrainDisplacement(outs.height), 1);
-	outs.position = ModelMatrix * pos;
+	outs.height = GetTerrain(x, outs.position, outs.gradient);
+	vec4 pos = vec4(outs.position, 1);
+	outs.position = (ModelMatrix * pos).xyz;
 	gl_Position = ModelViewProjectionMatrix * pos;
 }
 
@@ -193,15 +210,16 @@ void main()
 
 in FragmentData
 {
-	smooth vec4 position;
+	smooth vec3 position;
 	smooth float height;
+	smooth vec3 gradient;
 	smooth vec3 tessCoord;
 } ins;
 
 layout (location = 0) out vec4 Position;
-layout (location = 1) out vec4 Diffuse;
-layout (location = 2) out vec4 Normal;
-layout (location = 3) out vec4 TexCoord;
+layout (location = 1) out vec4 Normal;
+layout (location = 2) out vec4 Diffuse;
+layout (location = 3) out vec4 Aux;
 
 const int NumColors = 8;
 const float Steps[] = float[NumColors](-1, -0.25, 0, 0.0625, 0.125, 0.5, 0.75, 0.9);
@@ -217,6 +235,8 @@ const vec3 Colors[] = vec3[NumColors](
 );
 
 uniform bool EnableWireframe;
+
+#include Geodesic.Terrain
 
 void main()
 {
@@ -234,13 +254,52 @@ void main()
 		float d = min(min(ins.tessCoord.x, ins.tessCoord.y), ins.tessCoord.z);
 		color *= clamp(d*d*1000, 0, 1);
 	}
-	// approximate normal
-	vec3 X = dFdx(ins.position.xyz);
-	vec3 Y = dFdy(ins.position.xyz);
-	Normal = vec4(normalize(cross(X,Y)), 1);
 	// output into gbuffer
-	Position = ins.position;
-	Diffuse = vec4(color, 1.0);
-	//Normal = vec4(0);
-	TexCoord = vec4((x+1)/2);
+	Position = vec4(ins.position, 1);
+	Normal = vec4(GetNormal(normalize(ins.position), ins.gradient), 1);
+	Diffuse = vec4(color, 1);
+	Aux = vec4(normalize(abs(ins.gradient)), 1);
 }
+
+-- Stuff
+
+mat3 GetRotationMatrix(vec3 axis, float angle)
+{
+    axis = normalize(axis);
+    float s = sin(angle);
+    float c = cos(angle);
+    float oc = 1.0 - c;
+    return mat3(oc * axis.x * axis.x + c,           oc * axis.x * axis.y - axis.z * s,  oc * axis.z * axis.x + axis.y * s,
+                oc * axis.x * axis.y + axis.z * s,  oc * axis.y * axis.y + c,           oc * axis.y * axis.z - axis.x * s,
+                oc * axis.z * axis.x - axis.y * s,  oc * axis.y * axis.z + axis.x * s,  oc * axis.z * axis.z + c);
+}
+
+// approximate normal with partial derivatives
+//vec3 X = dFdx(ins.position);
+//vec3 Y = dFdy(ins.position);
+//Normal = vec4(normalize(cross(X,Y)), 1);
+
+//vec3 p1 = cross(p0, vec3(1,0,0));
+//vec3 p2 = cross(p0, vec3(0,1,0));
+//gradient *= HeightScale;
+//outs.normal = normalize(cross(p1 * gradient, p2 * gradient));
+//if (dot(outs.normal, p0) < 0) outs.normal *= -1;
+//outs.normal = (cross(p1,p2));
+//outs.normal = normalize(p0-gradient);
+//vec3 bla = normalize(cross(gradient, p0));
+//outs.normal = normalize(-cross(gradient, bla));
+//if (outs.height < 0) outs.normal = p0;
+//gradient.y *= HeightScale;
+outs.gradient = gradient;
+//outs.normal = normalize(cross(p0, gradient));
+	
+// approximate normal
+//mat3 rot1 = GetRotationMatrix(vec3(1,0,0), 0.001);
+//mat3 rot2 = GetRotationMatrix(vec3(0,1,0), 0.001);
+//vec3 p1 = GetTerrainPosition(rot1 * p0);
+//vec3 p2 = GetTerrainPosition(rot2 * p0);
+//outs.normal = normalize(cross(p1-p0, p2-p0));
+//const float dp = 0.0001;
+//vec3 p1 = GetTerrainPosition(GetTessPos(gl_TessCoord + vec3(0,dp,0)));
+//vec3 p2 = GetTerrainPosition(GetTessPos(gl_TessCoord + vec3(0,0,dp)));
+//outs.normal = normalize(cross(p1-p0, p2-p0));

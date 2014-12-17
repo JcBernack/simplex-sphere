@@ -31,16 +31,16 @@ namespace Sphere
         public float TerrainScale;
 
         private readonly VariableHandler _variableHandler;
-
+        
         private GeodesicProgramOdd _programOdd;
         private GeodesicProgram _programEqual;
         private GeodesicProgram _program;
         
         private VertexArray _vao;
         private Icosahedron _icosahedron;
-
+        
         private DeferredRenderer _deferredRenderer;
-
+        
         private CameraBase _camera;
         private Matrix4 _modelMatrix;
         private Matrix4 _viewMatrix;
@@ -48,6 +48,8 @@ namespace Sphere
         private Matrix4 _projectionMatrix;
         private bool _fixedTessellation;
         private bool _enableWireframe;
+        private bool _renderGBuffer;
+        private GBufferType _renderbufferType;
 
         private const float ClipNear = 2;
         private const float ClipFar = 2000;
@@ -163,34 +165,43 @@ namespace Sphere
             _vao.Bind();
             _vao.DrawElements(PrimitiveType.Patches, _icosahedron.Indices.Length);
             _deferredRenderer.EndGeometryPass();
-            
-            _deferredRenderer.BeginLightPass();
-            var eye = _camera.GetEyePosition();
-            var dirLight = new DirectionalLight
-            {
-                Direction = new Vector3(0,-1,0),
-                Color = new Vector3(1),
-                AmbientIntensity = 0.1f,
-                DiffuseIntensity = 0.5f
-            };
-            _deferredRenderer.DrawDirectionalLight(eye, dirLight);
-            var light = new PointLight
-            {
-                Position = new Vector3(0, 0, Radius + HeightScale * (1.5f + 0.5f*MathF.Sin((float)(FrameTimer.TimeRunning / 500)))),
-                Attenuation = new Vector3(0, 0.1f, 0.1f),
-                Color = new Vector3(1),
-                AmbientIntensity = 100,
-                DiffuseIntensity = 100
-            };
-            var rot = Matrix3.CreateRotationY(MathF.PI / 4);
-            for (var i = 0; i < 2; i++)
-            {
-                _deferredRenderer.DrawPointLight(eye, light);
-                Vector3.Transform(ref light.Position, ref rot, out light.Position);
-            }
-            _deferredRenderer.EndLightPass();
 
-            //_deferredRenderer.DrawGBuffer(GBufferType.Position);
+            if (_renderGBuffer)
+            {
+                _deferredRenderer.DrawGBuffer(_renderbufferType);
+            }
+            else
+            {
+                _deferredRenderer.BeginLightPass();
+                var eye = _camera.GetEyePosition();
+                var dirLight = new DirectionalLight
+                {
+                    Direction = new Vector3(0,-1,0),
+                        //-(float) Math.Sin(FrameTimer.TimeRunning/1000), 0, (float) Math.Cos(FrameTimer.TimeRunning/1000)),
+                    Color = new Vector3(1),
+                    AmbientIntensity = 0.1f,
+                    DiffuseIntensity = 0.9f
+                };
+                _deferredRenderer.DrawDirectionalLight(eye, dirLight);
+                //var light = new PointLight
+                //{
+                //    Position =
+                //        new Vector3(0, 0,
+                //            Radius + HeightScale*(1.5f + 0.5f*MathF.Sin((float) (FrameTimer.TimeRunning/500)))),
+                //    Attenuation = new Vector3(0, 0.1f, 0.1f),
+                //    Color = new Vector3(1),
+                //    AmbientIntensity = 100,
+                //    DiffuseIntensity = 100
+                //};
+                //var rot = Matrix3.CreateRotationY(MathF.PI/4);
+                //for (var i = 0; i < 2; i++)
+                //{
+                //    _deferredRenderer.DrawPointLight(eye, light);
+                //    Vector3.Transform(ref light.Position, ref rot, out light.Position);
+                //}
+                _deferredRenderer.EndLightPass();
+            }
+
             SwapBuffers();
         }
 
@@ -214,6 +225,21 @@ namespace Sphere
                 _camera.Position = eye;
                 _camera.Enable(this);
             }
+            if (e.Key == Key.Number1) SetBuffer(GBufferType.Position);
+            if (e.Key == Key.Number2) SetBuffer(GBufferType.Normal);
+            if (e.Key == Key.Number3) SetBuffer(GBufferType.Diffuse);
+            if (e.Key == Key.Number4) SetBuffer(GBufferType.Aux);
+        }
+
+        private void SetBuffer(GBufferType buffer)
+        {
+            if (_renderGBuffer && _renderbufferType == buffer)
+            {
+                _renderGBuffer = false;
+                return;
+            }
+            _renderGBuffer = true;
+            _renderbufferType = buffer;
         }
 
         public static void Main(string[] args)

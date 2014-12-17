@@ -43,7 +43,7 @@ uniform vec3 EyePosition;
 uniform sampler2D GPosition;
 uniform sampler2D GNormal;
 uniform sampler2D GDiffuse;
-//uniform sampler2D GTexCoord;
+uniform sampler2D GAux;
 
 uniform vec2 InverseScreenSize;
 

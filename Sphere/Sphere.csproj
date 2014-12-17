@@ -56,11 +56,12 @@
     <Reference Include="System.Drawing" />
   </ItemGroup>
   <ItemGroup>
-    <Compile Include="GBuffer.cs" />
     <Compile Include="Icosahedron.cs" />
     <Compile Include="Properties\AssemblyInfo.cs" />
     <Compile Include="Renderer\DeferredRenderer.cs" />
     <Compile Include="Renderer\DirectionalLight.cs" />
+    <Compile Include="Renderer\GBuffer.cs" />
+    <Compile Include="Renderer\GBufferType.cs" />
     <Compile Include="Renderer\LightBase.cs" />
     <Compile Include="Renderer\Material.cs" />
     <Compile Include="Renderer\PointLight.cs" />
