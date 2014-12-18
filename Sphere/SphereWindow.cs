@@ -180,9 +180,9 @@ namespace Sphere
                         //-(float) Math.Sin(FrameTimer.TimeRunning/1000), 0, (float) Math.Cos(FrameTimer.TimeRunning/1000)),
                     Color = new Vector3(1),
                     AmbientIntensity = 0.1f,
-                    DiffuseIntensity = 0.9f
+                    DiffuseIntensity = 0.5f
                 };
-                _deferredRenderer.DrawDirectionalLight(eye, dirLight);
+                //_deferredRenderer.DrawDirectionalLight(eye, dirLight);
                 //var light = new PointLight
                 //{
                 //    Position =
@@ -199,6 +199,17 @@ namespace Sphere
                 //    _deferredRenderer.DrawPointLight(eye, light);
                 //    Vector3.Transform(ref light.Position, ref rot, out light.Position);
                 //}
+                var largeLight = new PointLight
+                {
+                    Position = new Vector3(-2*Radius, 0, 0),
+                    Color = new Vector3(1.0f, 0.8f, 0.2f)
+                };
+                largeLight.SetLinearRange(10*Radius, 2*Radius, 0.95f);
+                _deferredRenderer.DrawPointLight(eye, largeLight);
+                largeLight.Position *= -1;
+                largeLight.Color = new Vector3(1,0,0);
+                _deferredRenderer.DrawPointLight(eye, largeLight);
+
                 _deferredRenderer.EndLightPass();
             }
 
