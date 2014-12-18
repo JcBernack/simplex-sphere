@@ -200,7 +200,7 @@ float snoise(vec3 v, out vec3 grad)
 	vec4 temp = m2 * m * pdotx;
 	grad = -8.0 * (temp.x * x0 + temp.y * x1 + temp.z * x2 + temp.w * x3);
 	grad += m4.x * p0 + m4.y * p1 + m4.z * p2 + m4.w * p3;
-	grad /= 4.8;
-	
+	grad *= 42.0;
+
 	return 42.0 * dot(m4, pdotx);
 }

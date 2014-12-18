@@ -36,16 +36,23 @@ uniform float HeightScale;
 
 //TODO: maybe add back the height cutoff: max(0, HeightScale * height)
 
+float GetTerrainInternal(float height)
+{
+	return Radius + HeightScale * height;
+}
+
 float GetTerrain(vec3 unitPosition, out vec3 terrainPosition, out vec3 gradient)
 {
 	float height = snoise(unitPosition * TerrainScale, gradient);
-	terrainPosition = unitPosition * (Radius + HeightScale * height);
+	float scale = GetTerrainInternal(height);
+	gradient *= TerrainScale / scale;
+	terrainPosition = unitPosition * scale;
 	return height;
 }
 
 vec3 GetTerrain(vec3 unitPosition)
 {
-	return unitPosition * (Radius + HeightScale * snoise(unitPosition * TerrainScale));
+	return unitPosition * GetTerrainInternal(snoise(unitPosition * TerrainScale));
 }
 
 vec3 GetNormal(vec3 unitPosition, vec3 gradient)
@@ -120,9 +127,10 @@ bool EdgeInFrustrum(vec4 p, vec4 q)
 
 bool IsFrontFace(vec4 p0, vec4 p1, vec4 p2)
 {
+	//TODO: patch-wise backface culling often produces wrong results, think of something better
+	return true;
 	vec4 edge1 = p1/p1.w-p0/p0.w;
 	vec4 edge2 = p2/p2.w-p0/p0.w;
-	//TODO: patch-wise backface culling often produces wrong results, think of something better
 	return cross(edge1.xyz, edge2.xyz).z < 0;
 }
 
@@ -221,17 +229,24 @@ layout (location = 1) out vec4 Normal;
 layout (location = 2) out vec4 Diffuse;
 layout (location = 3) out vec4 Aux;
 
-const int NumColors = 8;
-const float Steps[] = float[NumColors](-1, -0.25, 0, 0.0625, 0.125, 0.5, 0.75, 0.9);
+//const int NumColors = 8;
+//const float Steps[] = float[NumColors](-1, -0.25, 0, 0.0625, 0.125, 0.5, 0.75, 0.9);
+//const vec3 Colors[] = vec3[NumColors](
+//	vec3(0, 0, 0.6), // deeps
+//	vec3(0, 0, 0.8), // shallow
+//	vec3(0, 0.5, 1), // shore
+//	vec3(0.9375, 0.9375, 0.25), // sand
+//	vec3(0.125, 0.625, 0), // grass
+//	vec3(0.47, 0.28, 0), // dirt
+//	vec3(0.5, 0.5, 0.5), // rock
+//	vec3(1, 1, 1) //snow
+//);
+
+const int NumColors = 2;
+const float Steps[] = float[NumColors](-1, 1);
 const vec3 Colors[] = vec3[NumColors](
-	vec3(0, 0, 0.6), // deeps
-	vec3(0, 0, 0.8), // shallow
-	vec3(0, 0.5, 1), // shore
-	vec3(0.9375, 0.9375, 0.25), // sand
-	vec3(0.125, 0.625, 0), // grass
-	vec3(0.47, 0.28, 0), // dirt
-	vec3(0.5, 0.5, 0.5), // rock
-	vec3(1, 1, 1) //snow
+	vec3(0, 0, 0),
+	vec3(1, 1, 1)
 );
 
 uniform bool EnableWireframe;
@@ -289,8 +304,6 @@ mat3 GetRotationMatrix(vec3 axis, float angle)
 //vec3 bla = normalize(cross(gradient, p0));
 //outs.normal = normalize(-cross(gradient, bla));
 //if (outs.height < 0) outs.normal = p0;
-//gradient.y *= HeightScale;
-outs.gradient = gradient;
 //outs.normal = normalize(cross(p0, gradient));
 	
 // approximate normal

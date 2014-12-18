@@ -64,21 +64,15 @@ namespace Sphere
             // kerbin radius in [km]
             Radius = 600;
             // highest elevation on kerbin in [km]
-            HeightScale = 6.764f;
-            TerrainScale = 2;
+            //HeightScale = 6.764f;
+            HeightScale = 22;
+            TerrainScale = 3.0001f;
             // set up camera
             //_camera = new ThirdPersonCamera { DefaultOrigin = new Vector3(0, Radius, 0) };
             _camera = new ThirdPersonCamera();
             _camera.Enable(this);
-            _camera.DefaultPosition.Z = 1600;
+            _camera.DefaultPosition.Z = 3*Radius;
             _camera.ResetToDefault();
-            // test values
-            //_camera.DefaultPosition.Z = 150;
-            //_camera.DefaultPitch = 0.32f;
-            //_camera.DefaultYaw = 2.75f;
-            //_camera.ResetToDefault();
-            HeightScale = 22;
-            TerrainScale = 3.0001f;
             // hook up events
             Load += OnLoad;
             Unload += OnUnload;
@@ -109,8 +103,8 @@ namespace Sphere
             GL.ClearColor(Color4.Black);
             GL.Enable(EnableCap.DepthTest);
             // backface culling is done in the tesselation control shader
-            //GL.Enable(EnableCap.CullFace);
-            //GL.CullFace(CullFaceMode.Back);
+            GL.Enable(EnableCap.CullFace);
+            GL.CullFace(CullFaceMode.Back);
             GL.PatchParameter(PatchParameterInt.PatchVertices, 3);
             // lighting stuff
             _deferredRenderer = new DeferredRenderer();
@@ -141,8 +135,8 @@ namespace Sphere
 
         private void OnRender(object sender, FrameEventArgs e)
         {
-            Title = string.Format("Icosahedron tesselation - edge length: {0} - FPS: {1} - eye: {2}",
-                PixelsPerEdge, FrameTimer.FpsBasedOnFramesRendered, _camera.GetEyePosition());
+            Title = string.Format("Icosahedron tesselation - edge length: {0} - FPS: {1} - eye: {2} - r: {3} - h: {4} - t: {5}",
+                PixelsPerEdge, FrameTimer.FpsBasedOnFramesRendered, _camera.GetEyePosition(), Radius, HeightScale, TerrainScale);
             _viewMatrix = Matrix4.Identity;
             _camera.ApplyCamera(ref _viewMatrix);
             if (!_fixedTessellation) Matrix4.Mult(ref _modelMatrix, ref _viewMatrix, out _modelViewMatrix);
@@ -182,7 +176,7 @@ namespace Sphere
                     AmbientIntensity = 0.1f,
                     DiffuseIntensity = 0.5f
                 };
-                //_deferredRenderer.DrawDirectionalLight(eye, dirLight);
+                _deferredRenderer.DrawDirectionalLight(eye, dirLight);
                 //var light = new PointLight
                 //{
                 //    Position =
