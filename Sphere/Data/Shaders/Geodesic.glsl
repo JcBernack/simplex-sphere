@@ -13,41 +13,57 @@ uniform float Radius;
 uniform float TerrainScale;
 uniform float HeightScale;
 
-//const int NumOctaves = 4;
-//const vec2 Octaves[] = vec2[NumOctaves](
-//	vec2(1, 1),
-//	vec2(2.312, 0.5),
-//	vec2(5.741, 0.25),
-//	vec2(12.384, 0.125)
-//);
-
-//float GetTerrainHeight(vec3 unitPosition)
-//{
-//	vec3 p = unitPosition * TerrainScale;
-//	float n = 0;
-//	float range = 0;
-//	for (int i = 0; i < NumOctaves; i++)
-//	{
-//		n += snoise(p * Octaves[i].x) * Octaves[i].y;
-//		range += Octaves[i].y;
-//	}
-//	return n / range;
-//}
+const int NumOctaves = 4;
+const vec2 Octaves[] = vec2[NumOctaves](
+	vec2(1, 1),
+	vec2(2.312, 0.5),
+	vec2(5.741, 0.15),
+	vec2(12.384, 0.0125)
+);
+//const float OctaveSum = Octaves[0].y + Octaves[1].y + Octaves[2].y + Octaves[3].y;
 
 //TODO: maybe add back the height cutoff: max(0, HeightScale * height)
-
 float GetTerrainInternal(float height)
 {
 	return Radius + HeightScale * height;
 }
 
-float GetTerrain(vec3 unitPosition, out vec3 terrainPosition, out vec3 gradient)
+vec3 GetTerrainOctaves(vec3 unitPosition, out float height, out vec3 gradient)
 {
-	float height = snoise(unitPosition * TerrainScale, gradient);
+	gradient = vec3(0);
+	float noise = 0;
+	float rangeSum = 0;
+	vec3 gradientLocal;
+	for (int i = 0; i < NumOctaves; i++)
+	{
+		noise += snoise(unitPosition * TerrainScale * Octaves[i].x, gradientLocal) * Octaves[i].y;
+		gradient += gradientLocal * Octaves[i].x * Octaves[i].y;
+		rangeSum += Octaves[i].y;
+	}
+	height = noise / rangeSum;
+	float scale = GetTerrainInternal(height);
+	gradient *= TerrainScale / scale / rangeSum;
+	return unitPosition * scale;
+}
+
+vec3 GetTerrainOctaves(vec3 unitPosition)
+{
+	float noise = 0;
+	float rangeSum = 0;
+	for (int i = 0; i < NumOctaves; i++)
+	{
+		noise += snoise(unitPosition * TerrainScale * Octaves[i].x) * Octaves[i].y;
+		rangeSum += Octaves[i].y;
+	}
+	return unitPosition * GetTerrainInternal(noise / rangeSum);
+}
+
+vec3 GetTerrain(vec3 unitPosition, out float height, out vec3 gradient)
+{
+	height = snoise(unitPosition * TerrainScale, gradient);
 	float scale = GetTerrainInternal(height);
 	gradient *= TerrainScale / scale;
-	terrainPosition = unitPosition * scale;
-	return height;
+	return unitPosition * scale;
 }
 
 vec3 GetTerrain(vec3 unitPosition)
@@ -82,7 +98,7 @@ void main()
 	// pass through the unit sphere vertex
 	outs.unitPosition = Position;
 	// calculate terrain vertex to improve tessellation level
-	outs.terrainPosition = (ModelViewMatrix * vec4(GetTerrain(Position), 1)).xyz;
+	outs.terrainPosition = (ModelViewMatrix * vec4(GetTerrainOctaves(Position), 1)).xyz;
 }
 
 -- TessControl
@@ -207,7 +223,7 @@ void main()
 	// calculate new point on the unit sphere
 	vec3 x = GetTessPos(gl_TessCoord);
 	// calculate point on terrain
-	outs.height = GetTerrain(x, outs.position, outs.gradient);
+	outs.position = GetTerrainOctaves(x, outs.height, outs.gradient);
 	vec4 pos = vec4(outs.position, 1);
 	outs.position = (ModelMatrix * pos).xyz;
 	gl_Position = ModelViewProjectionMatrix * pos;
@@ -273,7 +289,13 @@ void main()
 	Position = vec4(ins.position, 1);
 	Normal = vec4(GetNormal(normalize(ins.position), ins.gradient), 1);
 	Diffuse = vec4(color, 1);
-	Aux = vec4(normalize(abs(ins.gradient)), 1);
+	//Aux = vec4(normalize(abs(ins.gradient)), 1);
+
+	// approximate normal with partial derivatives
+	vec3 X = dFdx(ins.position);
+	vec3 Y = dFdy(ins.position);
+	// output approximated error on the normals
+	Aux = vec4(Normal.xyz - normalize(cross(X,Y)), 1);
 }
 
 -- Stuff

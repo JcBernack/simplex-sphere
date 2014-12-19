@@ -19,7 +19,7 @@ namespace Sphere
         : DerpWindow
     {
         [Variable(Key.Right, Key.Left, VariableScaling.Linear, 10)]
-        public float PixelsPerEdge = 30;
+        public float PixelsPerEdge;
 
         [Variable(Key.Up, Key.Down, VariableScaling.Linear, 100)]
         public float Radius;
@@ -61,6 +61,8 @@ namespace Sphere
             VSync = VSyncMode.Off;
             // initialize variable handler
             _variableHandler = new VariableHandler(this);
+            // set tessellation quality
+            PixelsPerEdge = 20;
             // kerbin radius in [km]
             Radius = 600;
             // highest elevation on kerbin in [km]
