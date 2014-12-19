@@ -1,6 +1,6 @@
 using System;
 using System.Collections.Generic;
-using DerpGL.Shapes;
+using ObjectTK.Shapes;
 using OpenTK;
 
 namespace Sphere

@@ -1,7 +1,7 @@
-using DerpGL;
-using DerpGL.Buffers;
-using DerpGL.Shaders;
-using DerpGL.Shapes;
+using ObjectTK;
+using ObjectTK.Buffers;
+using ObjectTK.Shaders;
+using ObjectTK.Shapes;
 using OpenTK;
 using OpenTK.Graphics.OpenGL;
 using Sphere.Shaders;

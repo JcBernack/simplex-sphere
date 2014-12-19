@@ -1,9 +1,9 @@
 ﻿using System;
-using DerpGL;
-using DerpGL.Buffers;
-using DerpGL.Cameras;
-using DerpGL.Shaders;
-using DerpGL.Utilities;
+using ObjectTK;
+using ObjectTK.Buffers;
+using ObjectTK.Cameras;
+using ObjectTK.Shaders;
+using ObjectTK.Utilities;
 using log4net.Config;
 using OpenTK;
 using OpenTK.Graphics;
@@ -67,7 +67,7 @@ namespace Sphere
             Radius = 600;
             // highest elevation on kerbin in [km]
             //HeightScale = 6.764f;
-            HeightScale = 22;
+            HeightScale = 60;
             TerrainScale = 3.0001f;
             // set up camera
             //_camera = new ThirdPersonCamera { DefaultOrigin = new Vector3(0, Radius, 0) };
@@ -120,6 +120,7 @@ namespace Sphere
 
         private void OnResize(object sender, EventArgs e)
         {
+            //BUG: resize event is fired on minimize with a ClientSize of 0x0 which causes all kinds of bugs
             // adjust the viewport
             GL.Viewport(ClientSize);
             // resize G buffer
@@ -174,7 +175,7 @@ namespace Sphere
                 {
                     Direction = new Vector3(0,-1,0),
                         //-(float) Math.Sin(FrameTimer.TimeRunning/1000), 0, (float) Math.Cos(FrameTimer.TimeRunning/1000)),
-                    Color = new Vector3(1),
+                    Color = new Vector3(1.0f, 0.8f, 0.2f),
                     AmbientIntensity = 0.1f,
                     DiffuseIntensity = 0.5f
                 };
@@ -197,13 +198,16 @@ namespace Sphere
                 //}
                 var largeLight = new PointLight
                 {
-                    Position = new Vector3(-2*Radius, 0, 0),
-                    Color = new Vector3(1.0f, 0.8f, 0.2f)
+                    Position = new Vector3(2*Radius, 0, 0),
+                    Color = new Vector3(1,0,0)
                 };
                 largeLight.SetLinearRange(10*Radius, 2*Radius, 0.95f);
                 _deferredRenderer.DrawPointLight(eye, largeLight);
-                largeLight.Position *= -1;
-                largeLight.Color = new Vector3(1,0,0);
+                //largeLight.Position = new Vector3(0, 0, 2*Radius);
+                //largeLight.Color = new Vector3(0,1,0);
+                //_deferredRenderer.DrawPointLight(eye, largeLight);
+                largeLight.Position = new Vector3(-2*Radius, 0, 0);
+                largeLight.Color = new Vector3(0,0,1);
                 _deferredRenderer.DrawPointLight(eye, largeLight);
 
                 _deferredRenderer.EndLightPass();

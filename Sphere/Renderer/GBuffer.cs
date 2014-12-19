@@ -1,9 +1,9 @@
 using System;
 using System.Collections.Generic;
 using System.Linq;
-using DerpGL;
-using DerpGL.Buffers;
-using DerpGL.Textures;
+using ObjectTK;
+using ObjectTK.Buffers;
+using ObjectTK.Textures;
 using OpenTK;
 using OpenTK.Graphics.OpenGL;
 using Sphere.Shaders;

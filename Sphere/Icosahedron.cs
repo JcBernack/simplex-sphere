@@ -1,5 +1,5 @@
 ﻿using System;
-using DerpGL.Shapes;
+using ObjectTK.Shapes;
 using OpenTK;
 using OpenTK.Graphics.OpenGL;
 

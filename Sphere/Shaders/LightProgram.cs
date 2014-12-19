@@ -1,4 +1,4 @@
-﻿using DerpGL.Shaders.Variables;
+﻿using ObjectTK.Shaders.Variables;
 using OpenTK;
 using OpenTK.Graphics.OpenGL;
 
