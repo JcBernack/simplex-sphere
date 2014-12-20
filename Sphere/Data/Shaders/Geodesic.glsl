@@ -258,11 +258,13 @@ layout (location = 3) out vec4 Aux;
 //	vec3(1, 1, 1) //snow
 //);
 
-const int NumColors = 2;
-const float Steps[] = float[NumColors](-1, 1);
+const int NumColors = 4;
+const float Steps[] = float[NumColors](-1, -0.2, 0.2, 1);
 const vec3 Colors[] = vec3[NumColors](
-	vec3(0, 0, 0),
-	vec3(1, 1, 1)
+	vec3(0),
+	vec3(0.3),
+	vec3(0.7),
+	vec3(1)
 );
 
 uniform bool EnableWireframe;
@@ -289,16 +291,16 @@ void main()
 	Position = vec4(ins.position, 1);
 	Normal = vec4(GetNormal(normalize(ins.position), ins.gradient), 1);
 	Diffuse = vec4(color, 1);
-	//Aux = vec4(normalize(abs(ins.gradient)), 1);
-
-	// approximate normal with partial derivatives
-	vec3 X = dFdx(ins.position);
-	vec3 Y = dFdy(ins.position);
-	// output approximated error on the normals
-	Aux = vec4(Normal.xyz - normalize(cross(X,Y)), 1);
+	Aux = vec4(normalize(abs(ins.gradient)), 1);
 }
 
--- Stuff
+-- Unused Stuff
+
+// approximate normal with partial derivatives
+vec3 X = dFdx(ins.position);
+vec3 Y = dFdy(ins.position);
+// output approximated error on the normals
+Aux = vec4(Normal.xyz - normalize(cross(X,Y)), 1);
 
 mat3 GetRotationMatrix(vec3 axis, float angle)
 {
@@ -310,31 +312,3 @@ mat3 GetRotationMatrix(vec3 axis, float angle)
                 oc * axis.x * axis.y + axis.z * s,  oc * axis.y * axis.y + c,           oc * axis.y * axis.z - axis.x * s,
                 oc * axis.z * axis.x - axis.y * s,  oc * axis.y * axis.z + axis.x * s,  oc * axis.z * axis.z + c);
 }
-
-// approximate normal with partial derivatives
-//vec3 X = dFdx(ins.position);
-//vec3 Y = dFdy(ins.position);
-//Normal = vec4(normalize(cross(X,Y)), 1);
-
-//vec3 p1 = cross(p0, vec3(1,0,0));
-//vec3 p2 = cross(p0, vec3(0,1,0));
-//gradient *= HeightScale;
-//outs.normal = normalize(cross(p1 * gradient, p2 * gradient));
-//if (dot(outs.normal, p0) < 0) outs.normal *= -1;
-//outs.normal = (cross(p1,p2));
-//outs.normal = normalize(p0-gradient);
-//vec3 bla = normalize(cross(gradient, p0));
-//outs.normal = normalize(-cross(gradient, bla));
-//if (outs.height < 0) outs.normal = p0;
-//outs.normal = normalize(cross(p0, gradient));
-	
-// approximate normal
-//mat3 rot1 = GetRotationMatrix(vec3(1,0,0), 0.001);
-//mat3 rot2 = GetRotationMatrix(vec3(0,1,0), 0.001);
-//vec3 p1 = GetTerrainPosition(rot1 * p0);
-//vec3 p2 = GetTerrainPosition(rot2 * p0);
-//outs.normal = normalize(cross(p1-p0, p2-p0));
-//const float dp = 0.0001;
-//vec3 p1 = GetTerrainPosition(GetTessPos(gl_TessCoord + vec3(0,dp,0)));
-//vec3 p2 = GetTerrainPosition(GetTessPos(gl_TessCoord + vec3(0,0,dp)));
-//outs.normal = normalize(cross(p1-p0, p2-p0));
