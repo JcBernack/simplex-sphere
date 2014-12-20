@@ -10,17 +10,10 @@ uniform mat4 ModelViewProjectionMatrix;
 #include Noise.3D
 
 uniform float Radius;
-uniform float TerrainScale;
 uniform float HeightScale;
-
-const int NumOctaves = 4;
-const vec2 Octaves[] = vec2[NumOctaves](
-	vec2(1, 1),
-	vec2(2.312, 0.5),
-	vec2(5.741, 0.15),
-	vec2(12.384, 0.0125)
-);
-//const float OctaveSum = Octaves[0].y + Octaves[1].y + Octaves[2].y + Octaves[3].y;
+uniform float TerrainScale;
+uniform float Persistence;
+uniform int Octaves = 6;
 
 //TODO: maybe add back the height cutoff: max(0, HeightScale * height)
 float GetTerrainInternal(float height)
@@ -31,14 +24,18 @@ float GetTerrainInternal(float height)
 vec3 GetTerrainOctaves(vec3 unitPosition, out float height, out vec3 gradient)
 {
 	gradient = vec3(0);
+	float frequency = 1;
+	float amplitude = 1;
 	float noise = 0;
 	float rangeSum = 0;
 	vec3 gradientLocal;
-	for (int i = 0; i < NumOctaves; i++)
+	for (int i = 0; i < Octaves; i++)
 	{
-		noise += snoise(unitPosition * TerrainScale * Octaves[i].x, gradientLocal) * Octaves[i].y;
-		gradient += gradientLocal * Octaves[i].x * Octaves[i].y;
-		rangeSum += Octaves[i].y;
+		noise += snoise(unitPosition * TerrainScale * frequency, gradientLocal) * amplitude;
+		gradient += gradientLocal * frequency * amplitude;
+		rangeSum += amplitude;
+		frequency *= 2;
+		amplitude *= Persistence;
 	}
 	height = noise / rangeSum;
 	float scale = GetTerrainInternal(height);
@@ -46,16 +43,26 @@ vec3 GetTerrainOctaves(vec3 unitPosition, out float height, out vec3 gradient)
 	return unitPosition * scale;
 }
 
-vec3 GetTerrainOctaves(vec3 unitPosition)
+float GetNoiseOctaves(vec3 position)
 {
+	float frequency = 1;
+	float amplitude = 1;
 	float noise = 0;
 	float rangeSum = 0;
-	for (int i = 0; i < NumOctaves; i++)
+	for (int i = 0; i < Octaves; i++)
 	{
-		noise += snoise(unitPosition * TerrainScale * Octaves[i].x) * Octaves[i].y;
-		rangeSum += Octaves[i].y;
+		noise += snoise(position * frequency) * amplitude;
+		rangeSum += amplitude;
+		frequency *= 2;
+		amplitude *= Persistence;
 	}
-	return unitPosition * GetTerrainInternal(noise / rangeSum);
+	return noise / rangeSum;
+}
+
+vec3 GetTerrainOctaves(vec3 unitPosition)
+{
+	float height = GetNoiseOctaves(unitPosition * TerrainScale);
+	return unitPosition * GetTerrainInternal(height);
 }
 
 vec3 GetTerrain(vec3 unitPosition, out float height, out vec3 gradient)
@@ -245,27 +252,29 @@ layout (location = 1) out vec4 Normal;
 layout (location = 2) out vec4 Diffuse;
 layout (location = 3) out vec4 Aux;
 
-//const int NumColors = 8;
-//const float Steps[] = float[NumColors](-1, -0.25, 0, 0.0625, 0.125, 0.5, 0.75, 0.9);
-//const vec3 Colors[] = vec3[NumColors](
-//	vec3(0, 0, 0.6), // deeps
-//	vec3(0, 0, 0.8), // shallow
-//	vec3(0, 0.5, 1), // shore
-//	vec3(0.9375, 0.9375, 0.25), // sand
-//	vec3(0.125, 0.625, 0), // grass
-//	vec3(0.47, 0.28, 0), // dirt
-//	vec3(0.5, 0.5, 0.5), // rock
-//	vec3(1, 1, 1) //snow
-//);
-
-const int NumColors = 4;
-const float Steps[] = float[NumColors](-1, -0.2, 0.2, 1);
+const int NumColors = 10;
+const float Steps[] = float[NumColors](-1, -0.25, 0, 0.0625, 0.125, 0.2, 0.201, 0.5, 0.75, 0.9);
 const vec3 Colors[] = vec3[NumColors](
-	vec3(0),
-	vec3(0.3),
-	vec3(0.7),
-	vec3(1)
+	vec3(0, 0, 0.6), // deeps
+	vec3(0, 0, 0.8), // shallow
+	vec3(0, 0.5, 1), // shore
+	vec3(0.9375, 0.9375, 0.25), // sand
+	vec3(0.9375, 0.9375, 0.25), // sand
+	vec3(0.125, 0.625, 0), // grass
+	vec3(0.125, 0.625, 0), // grass
+	vec3(0.47, 0.28, 0), // dirt
+	vec3(0.5, 0.5, 0.5), // rock
+	vec3(1, 1, 1) //snow
 );
+
+//const int NumColors = 4;
+//const float Steps[] = float[NumColors](-1, -0.2, 0.2, 1);
+//const vec3 Colors[] = vec3[NumColors](
+//	vec3(0),
+//	vec3(0.3),
+//	vec3(0.7),
+//	vec3(1)
+//);
 
 uniform bool EnableWireframe;
 
@@ -281,6 +290,9 @@ void main()
 	{
 		color = mix(color, Colors[i], smoothstep(Steps[i-1], Steps[i], x));
 	}
+	// add noise to color to give it some texture
+	const float range = 0.1;
+	color *= (1-range) + GetNoiseOctaves(ins.position) * range;
 	// add wireframe to color
 	if (EnableWireframe)
 	{

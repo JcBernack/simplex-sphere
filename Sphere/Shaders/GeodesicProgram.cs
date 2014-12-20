@@ -22,11 +22,13 @@ namespace Sphere.Shaders
         public Uniform<Matrix4> ModelViewProjectionMatrix { get; protected set; }
         public Uniform<Matrix3> NormalMatrix { get; protected set; }
 
-        public Uniform<float> Radius { get; protected set; }
         public Uniform<float> EdgesPerScreenHeight { get; protected set; }
-        public Uniform<float> TerrainScale { get; protected set; }
+        public Uniform<float> Radius { get; protected set; }
         public Uniform<float> HeightScale { get; protected set; }
-        
+        public Uniform<float> TerrainScale { get; protected set; }
+        public Uniform<float> Persistence { get; protected set; }
+        public Uniform<int> Octaves { get; protected set; }
+
         public Uniform<bool> EnableWireframe { get; protected set; }
 
         //public FragData FragColor { get; protected set; }

@@ -30,6 +30,12 @@ namespace Sphere
         [Variable(Key.Home, Key.End, VariableScaling.Linear, 1)]
         public float TerrainScale;
 
+        [Variable(Key.Insert, Key.Delete, VariableScaling.Linear, 0.1f)]
+        public float Persistence;
+
+        [Variable(Key.KeypadPlus, Key.KeypadMinus, VariableScaling.Linear, 1)]
+        public float Octaves;
+
         private readonly VariableHandler _variableHandler;
         
         private GeodesicProgramOdd _programOdd;
@@ -51,7 +57,7 @@ namespace Sphere
         private bool _renderGBuffer;
         private GBufferType _renderbufferType;
 
-        private const float ClipNear = 2;
+        private const float ClipNear = 0.01f;
         private const float ClipFar = 2000;
 
         public SphereWindow()
@@ -67,8 +73,10 @@ namespace Sphere
             Radius = 600;
             // highest elevation on kerbin in [km]
             //HeightScale = 6.764f;
-            HeightScale = 60;
-            TerrainScale = 3.0001f;
+            HeightScale = 25;
+            TerrainScale = 2.0001f;
+            Persistence = 0.3f;
+            Octaves = 5;
             // set up camera
             //_camera = new ThirdPersonCamera { DefaultOrigin = new Vector3(0, Radius, 0) };
             _camera = new ThirdPersonCamera();
@@ -138,8 +146,8 @@ namespace Sphere
 
         private void OnRender(object sender, FrameEventArgs e)
         {
-            Title = string.Format("Icosahedron tesselation - edge length: {0} - FPS: {1} - eye: {2} - r: {3} - h: {4} - t: {5}",
-                PixelsPerEdge, FrameTimer.FpsBasedOnFramesRendered, _camera.GetEyePosition(), Radius, HeightScale, TerrainScale);
+            Title = string.Format("Icosahedron tesselation - edge length: {0} - FPS: {1} - eye: {2} - r: {3} - h: {4} - t: {5} - p: {6}",
+                PixelsPerEdge, FrameTimer.FpsBasedOnFramesRendered, _camera.GetEyePosition(), Radius, HeightScale, TerrainScale, Persistence);
             _viewMatrix = Matrix4.Identity;
             _camera.ApplyCamera(ref _viewMatrix);
             if (!_fixedTessellation) Matrix4.Mult(ref _modelMatrix, ref _viewMatrix, out _modelViewMatrix);
@@ -156,6 +164,8 @@ namespace Sphere
             _program.Radius.Set(Radius);
             _program.TerrainScale.Set(TerrainScale);
             _program.HeightScale.Set(HeightScale);
+            _program.Persistence.Set(Persistence);
+            _program.Octaves.Set((int)Octaves);
             _program.EnableWireframe.Set(_enableWireframe);
             
             _deferredRenderer.BeginGeometryPass();
