@@ -29,6 +29,8 @@ namespace Sphere.Shaders
         public Uniform<float> Persistence { get; protected set; }
         public Uniform<int> Octaves { get; protected set; }
 
+        public Uniform<bool> EnableFragmentNormal { get; protected set; }
+        public Uniform<bool> EnableNoiseTexture { get; protected set; }
         public Uniform<bool> EnableWireframe { get; protected set; }
 
         //public FragData FragColor { get; protected set; }

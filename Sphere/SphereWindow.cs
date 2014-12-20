@@ -18,23 +18,35 @@ namespace Sphere
     public class SphereWindow
         : DerpWindow
     {
-        [Variable(Key.Right, Key.Left, VariableScaling.Linear, 10)]
+        [Variable(Speed = 10, IncKey = Key.Right, DecKey = Key.Left)]
         public float PixelsPerEdge;
-
-        [Variable(Key.Up, Key.Down, VariableScaling.Linear, 100)]
+        
+        [Variable(Speed = 100, IncKey = Key.Up, DecKey = Key.Down)]
         public float Radius;
 
-        [Variable(Key.PageUp, Key.PageDown, VariableScaling.Linear, 50)]
+        [Variable(Speed = 50, IncKey = Key.PageUp, DecKey = Key.PageDown)]
         public float HeightScale;
 
-        [Variable(Key.Home, Key.End, VariableScaling.Linear, 1)]
+        [Variable(Speed = 1, IncKey = Key.Home, DecKey = Key.End)]
         public float TerrainScale;
 
-        [Variable(Key.Insert, Key.Delete, VariableScaling.Linear, 0.1f)]
+        [Variable(Speed = 0.1f, IncKey = Key.Insert, DecKey = Key.Delete)]
         public float Persistence;
 
-        [Variable(Key.KeypadPlus, Key.KeypadMinus, VariableScaling.Linear, 1)]
+        [Variable(Speed = 1, IncKey = Key.KeypadPlus, DecKey = Key.KeypadMinus, Minimum = 1, Maximum = 10, Mode = ScaleMode.KeyPress, Function = ScaleFunction.Linear)]
         public float Octaves;
+
+        [ToggleVariable(Key = Key.F1)]
+        public bool EnableWireframe;
+
+        [ToggleVariable(Key = Key.F2)]
+        public bool EnableNoiseTexture;
+
+        [ToggleVariable(Key = Key.F3)]
+        public bool EnableFragmentNormal;
+
+        [ToggleVariable(Key = Key.F4)]
+        public bool FixedTessellation;
 
         private readonly VariableHandler _variableHandler;
         
@@ -52,8 +64,6 @@ namespace Sphere
         private Matrix4 _viewMatrix;
         private Matrix4 _modelViewMatrix;
         private Matrix4 _projectionMatrix;
-        private bool _fixedTessellation;
-        private bool _enableWireframe;
         private bool _renderGBuffer;
         private GBufferType _renderbufferType;
 
@@ -67,16 +77,19 @@ namespace Sphere
             VSync = VSyncMode.Off;
             // initialize variable handler
             _variableHandler = new VariableHandler(this);
+            // default features
+            EnableNoiseTexture = true;
+            EnableFragmentNormal = true;
             // set tessellation quality
-            PixelsPerEdge = 20;
+            PixelsPerEdge = 50;
             // kerbin radius in [km]
             Radius = 600;
             // highest elevation on kerbin in [km]
             //HeightScale = 6.764f;
-            HeightScale = 25;
-            TerrainScale = 2.0001f;
-            Persistence = 0.3f;
-            Octaves = 5;
+            HeightScale = 51.64162f;
+            TerrainScale = 1.40356827f;
+            Persistence = 0.4292259f;
+            Octaves = 10;
             // set up camera
             //_camera = new ThirdPersonCamera { DefaultOrigin = new Vector3(0, Radius, 0) };
             _camera = new ThirdPersonCamera();
@@ -118,11 +131,15 @@ namespace Sphere
             GL.PatchParameter(PatchParameterInt.PatchVertices, 3);
             // lighting stuff
             _deferredRenderer = new DeferredRenderer();
+            // enable controls
+            _variableHandler.Enable(this);
         }
 
         private void OnUnload(object sender, EventArgs e)
         {
-            _icosahedron.Dispose();
+            // disable controls
+            _variableHandler.Disable(this);
+            // dispose resources
             GLResource.DisposeAll(this);
         }
 
@@ -140,17 +157,16 @@ namespace Sphere
 
         private void OnUpdate(object sender, FrameEventArgs e)
         {
-            _variableHandler.Update((float)e.Time);
             //_modelMatrix *= Matrix4.CreateRotationX((float) e.Time * 0.2f);
         }
 
         private void OnRender(object sender, FrameEventArgs e)
         {
-            Title = string.Format("Icosahedron tesselation - edge length: {0} - FPS: {1} - eye: {2} - r: {3} - h: {4} - t: {5} - p: {6}",
-                PixelsPerEdge, FrameTimer.FpsBasedOnFramesRendered, _camera.GetEyePosition(), Radius, HeightScale, TerrainScale, Persistence);
+            Title = string.Format("Icosahedron tesselation - FPS: {0} - eye: {1} - edge length: {2} - r: {3} - h: {4} - t: {5} - p: {6}, o: {7} ",
+                FrameTimer.FpsBasedOnFramesRendered, _camera.GetEyePosition(), PixelsPerEdge, Radius, HeightScale, TerrainScale, Persistence, Octaves);
             _viewMatrix = Matrix4.Identity;
             _camera.ApplyCamera(ref _viewMatrix);
-            if (!_fixedTessellation) Matrix4.Mult(ref _modelMatrix, ref _viewMatrix, out _modelViewMatrix);
+            if (!FixedTessellation) Matrix4.Mult(ref _modelMatrix, ref _viewMatrix, out _modelViewMatrix);
             
             // geometry pass
             _program.Use();
@@ -166,8 +182,10 @@ namespace Sphere
             _program.HeightScale.Set(HeightScale);
             _program.Persistence.Set(Persistence);
             _program.Octaves.Set((int)Octaves);
-            _program.EnableWireframe.Set(_enableWireframe);
-            
+            _program.EnableFragmentNormal.Set(EnableFragmentNormal);
+            _program.EnableNoiseTexture.Set(EnableNoiseTexture);
+            _program.EnableWireframe.Set(EnableWireframe);
+
             _deferredRenderer.BeginGeometryPass();
             _vao.Bind();
             _vao.DrawElements(PrimitiveType.Patches, _icosahedron.Indices.Length);
@@ -230,10 +248,8 @@ namespace Sphere
         {
             if (e.Key == Key.Escape) Close();
             if (e.Key == Key.R) _camera.ResetToDefault();
-            if (e.Key == Key.T) _fixedTessellation = !_fixedTessellation;
-            if (e.Key == Key.F1) _enableWireframe = !_enableWireframe;
-            if (e.Key == Key.F3) _program = _programOdd;
-            if (e.Key == Key.F4) _program = _programEqual;
+            if (e.Key == Key.F11) _program = _programOdd;
+            if (e.Key == Key.F12) _program = _programEqual;
             if (e.Key == Key.F5 || e.Key == Key.F6)
             {
                 _camera.Disable(this);

@@ -73,9 +73,12 @@
     <Compile Include="SphereWindow.cs" />
     <Compile Include="TessellationHelper.cs" />
     <Compile Include="Tessellator.cs" />
+    <Compile Include="Variables\ScaleMode.cs" />
+    <Compile Include="Variables\ToggleVariableAttribute.cs" />
     <Compile Include="Variables\VariableAttribute.cs" />
+    <Compile Include="Variables\VariableBaseAttribute.cs" />
     <Compile Include="Variables\VariableHandler.cs" />
-    <Compile Include="Variables\VariableScaling.cs" />
+    <Compile Include="Variables\ScaleFunction.cs" />
   </ItemGroup>
   <ItemGroup>
     <ProjectReference Include="..\..\ObjectTK\ObjectTKC\ObjectTKC.csproj">

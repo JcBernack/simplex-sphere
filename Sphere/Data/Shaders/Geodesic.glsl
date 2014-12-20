@@ -4,7 +4,7 @@ uniform mat4 ModelMatrix;
 uniform mat4 ProjectionMatrix;
 uniform mat4 ModelViewMatrix;
 uniform mat4 ModelViewProjectionMatrix;
-//uniform mat3 NormalMatrix;
+uniform mat3 NormalMatrix;
 
 -- Terrain
 #include Noise.3D
@@ -206,10 +206,11 @@ in TessData
 
 out FragmentData
 {
+	smooth vec3 unitPosition;
 	smooth vec3 position;
+	smooth vec3 tessCoord;
 	smooth float height;
 	smooth vec3 gradient;
-	smooth vec3 tessCoord;
 } outs;
 
 #include Geodesic.Matrices
@@ -228,10 +229,9 @@ void main()
 	// output the barycentric coordinates to render the wireframe in the fragment shader
 	outs.tessCoord = gl_TessCoord;
 	// calculate new point on the unit sphere
-	vec3 x = GetTessPos(gl_TessCoord);
+	outs.unitPosition = GetTessPos(gl_TessCoord);
 	// calculate point on terrain
-	outs.position = GetTerrainOctaves(x, outs.height, outs.gradient);
-	vec4 pos = vec4(outs.position, 1);
+	vec4 pos = vec4(GetTerrainOctaves(outs.unitPosition, outs.height, outs.gradient), 1);
 	outs.position = (ModelMatrix * pos).xyz;
 	gl_Position = ModelViewProjectionMatrix * pos;
 }
@@ -241,10 +241,11 @@ void main()
 
 in FragmentData
 {
+	smooth vec3 unitPosition;
 	smooth vec3 position;
+	smooth vec3 tessCoord;
 	smooth float height;
 	smooth vec3 gradient;
-	smooth vec3 tessCoord;
 } ins;
 
 layout (location = 0) out vec4 Position;
@@ -276,23 +277,36 @@ const vec3 Colors[] = vec3[NumColors](
 //	vec3(1)
 //);
 
+uniform bool EnableFragmentNormal;
+uniform bool EnableNoiseTexture;
 uniform bool EnableWireframe;
 
+#include Geodesic.Matrices
 #include Geodesic.Terrain
 
 void main()
 {
+	vec3 position = ins.position;
+	float height = ins.height;
+	vec3 gradient = ins.gradient;
+	// evaluate the noise again to calculate per-fragment normals
+	if (EnableFragmentNormal)
+	{
+		position = GetTerrainOctaves(ins.unitPosition, height, gradient);
+		position = (ModelMatrix * vec4(position, 1)).xyz;
+	}
 	// mix colors for different heights
-	//TODO: move color calculation to deferred shading pass
-	float x = ins.height;
-	vec3 color = mix(Colors[0], Colors[1], smoothstep(Steps[0], Steps[1], x));
+	vec3 color = mix(Colors[0], Colors[1], smoothstep(Steps[0], Steps[1], height));
 	for (int i = 2; i < NumColors; i++)
 	{
-		color = mix(color, Colors[i], smoothstep(Steps[i-1], Steps[i], x));
+		color = mix(color, Colors[i], smoothstep(Steps[i-1], Steps[i], height));
 	}
 	// add noise to color to give it some texture
-	const float range = 0.1;
-	color *= (1-range) + GetNoiseOctaves(ins.position) * range;
+	if (EnableNoiseTexture)
+	{
+		const float range = 0.1;
+		color *= (1-range) + snoise(position*20) * range;
+	}
 	// add wireframe to color
 	if (EnableWireframe)
 	{
@@ -300,10 +314,10 @@ void main()
 		color *= clamp(d*d*1000, 0, 1);
 	}
 	// output into gbuffer
-	Position = vec4(ins.position, 1);
-	Normal = vec4(GetNormal(normalize(ins.position), ins.gradient), 1);
+	Position = vec4(position, 1);
+	Normal = vec4(NormalMatrix * GetNormal(ins.unitPosition, gradient), 1);
 	Diffuse = vec4(color, 1);
-	Aux = vec4(normalize(abs(ins.gradient)), 1);
+	Aux = vec4(normalize(abs(gradient)), 1);
 }
 
 -- Unused Stuff

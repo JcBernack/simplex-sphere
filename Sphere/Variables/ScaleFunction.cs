@@ -1,6 +1,6 @@
 ﻿namespace Sphere.Variables
 {
-    public enum VariableScaling
+    public enum ScaleFunction
     {
         Linear,
         Exponential

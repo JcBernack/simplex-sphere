@@ -2,6 +2,7 @@ using System;
 using System.Collections.Generic;
 using System.Linq;
 using System.Reflection;
+using OpenTK;
 using OpenTK.Input;
 
 namespace Sphere.Variables
@@ -9,43 +10,53 @@ namespace Sphere.Variables
     public class VariableHandler
     {
         private readonly object _instance;
-        private readonly Dictionary<VariableAttribute, FieldInfo> _variables;
+        private readonly Dictionary<VariableBaseAttribute, FieldInfo> _variables;
 
         public VariableHandler(object instance)
         {
             _instance = instance;
-            _variables = new Dictionary<VariableAttribute, FieldInfo>();
+            _variables = new Dictionary<VariableBaseAttribute, FieldInfo>();
             foreach (var field in instance.GetType().GetFields(BindingFlags.Instance | BindingFlags.Public))
             {
-                var attribute = field.GetCustomAttributes<VariableAttribute>().FirstOrDefault();
-                if (attribute == null || field.FieldType != typeof(float)) continue;
+                var attribute = field.GetCustomAttributes<VariableBaseAttribute>().FirstOrDefault();
+                if (attribute == null) continue;
                 _variables.Add(attribute, field);
             }
         }
 
-        public void Update(float factor)
+        public void Enable(GameWindow window)
         {
-            var state = Keyboard.GetState();
+            window.UpdateFrame += Update;
+            window.KeyDown += KeyDown;
+        }
+
+        public void Disable(GameWindow window)
+        {
+            window.UpdateFrame -= Update;
+            window.KeyDown -= KeyDown;
+        }
+
+        private void Update(object sender, FrameEventArgs frameEventArgs)
+        {
+            Handle(ScaleMode.Continuous, Keyboard.GetState(), (float)frameEventArgs.Time);
+        }
+
+        private void KeyDown(object sender, KeyboardKeyEventArgs e)
+        {
+            Handle(ScaleMode.KeyPress, e.Keyboard, 1);
+        }
+
+        private void Handle(ScaleMode mode, KeyboardState state, float factor)
+        {
             foreach (var pair in _variables)
             {
-                var step = 0;
-                if (state.IsKeyDown(pair.Key.IncKey)) step++;
-                if (state.IsKeyDown(pair.Key.DecKey)) step--;
-                if (step == 0) continue;
+                if (pair.Key.Mode != mode) continue;
                 // get current value
-                var value = (float) pair.Value.GetValue(_instance);
-                switch (pair.Key.Scaling)
-                {
-                    case VariableScaling.Linear:
-                        value += pair.Key.Parameter * step * factor;
-                        break;
-                    case VariableScaling.Exponential:
-                        value *= 1 + pair.Key.Parameter * step * factor;
-                        break;
-                    default:
-                        throw new ArgumentOutOfRangeException();
-                }
-                pair.Value.SetValue(_instance, value);
+                var value = (float)Convert.ChangeType(pair.Value.GetValue(_instance), typeof(float));
+                // handle input to get new value
+                value = pair.Key.Handle(value, factor, state);
+                // convert and set new value
+                pair.Value.SetValue(_instance, Convert.ChangeType(value, pair.Value.FieldType));
             }
         }
     }
