@@ -3,7 +3,7 @@ using System.Collections.Generic;
 using ObjectTK.Shapes;
 using OpenTK;
 
-namespace Sphere
+namespace Sphere.Shapes
 {
     public class Tessellator
     {

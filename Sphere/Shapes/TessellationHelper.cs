@@ -1,4 +1,4 @@
-namespace Sphere
+namespace Sphere.Shapes
 {
     public static class TessellationHelper
     {

@@ -56,7 +56,8 @@
     <Reference Include="System.Drawing" />
   </ItemGroup>
   <ItemGroup>
-    <Compile Include="Icosahedron.cs" />
+    <Compile Include="FirstPersonAlignedCamera.cs" />
+    <Compile Include="LookAtCamera.cs" />
     <Compile Include="Properties\AssemblyInfo.cs" />
     <Compile Include="Renderer\DeferredRenderer.cs" />
     <Compile Include="Renderer\DirectionalLight.cs" />
@@ -70,9 +71,10 @@
     <Compile Include="Shaders\GeodesicProgram.cs" />
     <Compile Include="Shaders\LightProgram.cs" />
     <Compile Include="Shaders\PointLightProgram.cs" />
+    <Compile Include="Shapes\Icosahedron.cs" />
+    <Compile Include="Shapes\TessellationHelper.cs" />
+    <Compile Include="Shapes\Tessellator.cs" />
     <Compile Include="SphereWindow.cs" />
-    <Compile Include="TessellationHelper.cs" />
-    <Compile Include="Tessellator.cs" />
     <Compile Include="Variables\ScaleMode.cs" />
     <Compile Include="Variables\ToggleVariableAttribute.cs" />
     <Compile Include="Variables\VariableAttribute.cs" />

@@ -1,9 +1,9 @@
-﻿using System;
+using System;
 using ObjectTK.Shapes;
 using OpenTK;
 using OpenTK.Graphics.OpenGL;
 
-namespace Sphere
+namespace Sphere.Shapes
 {
     public class Icosahedron
         : IndexedShape

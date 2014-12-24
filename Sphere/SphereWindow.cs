@@ -11,6 +11,7 @@ using OpenTK.Graphics.OpenGL;
 using OpenTK.Input;
 using Sphere.Renderer;
 using Sphere.Shaders;
+using Sphere.Shapes;
 using Sphere.Variables;
 
 namespace Sphere
@@ -49,7 +50,7 @@ namespace Sphere
         public bool FixedTessellation;
 
         private readonly VariableHandler _variableHandler;
-        
+
         private GeodesicProgramOdd _programOdd;
         private GeodesicProgram _programEqual;
         private GeodesicProgram _program;
@@ -164,11 +165,13 @@ namespace Sphere
         {
             Title = string.Format("Icosahedron tesselation - FPS: {0} - eye: {1} - edge length: {2} - r: {3} - h: {4} - t: {5} - p: {6}, o: {7} ",
                 FrameTimer.FpsBasedOnFramesRendered, _camera.GetEyePosition(), PixelsPerEdge, Radius, HeightScale, TerrainScale, Persistence, Octaves);
+
+            // set up matrices
             _viewMatrix = Matrix4.Identity;
             _camera.ApplyCamera(ref _viewMatrix);
             if (!FixedTessellation) Matrix4.Mult(ref _modelMatrix, ref _viewMatrix, out _modelViewMatrix);
             
-            // geometry pass
+            // update uniforms
             _program.Use();
             _program.ModelMatrix.Set(_modelMatrix);
             _program.ViewMatrix.Set(_viewMatrix);
@@ -186,6 +189,7 @@ namespace Sphere
             _program.EnableNoiseTexture.Set(EnableNoiseTexture);
             _program.EnableWireframe.Set(EnableWireframe);
 
+            // geometry pass
             _deferredRenderer.BeginGeometryPass();
             _vao.Bind();
             _vao.DrawElements(PrimitiveType.Patches, _icosahedron.Indices.Length);
@@ -197,6 +201,7 @@ namespace Sphere
             }
             else
             {
+                // lighting pass
                 _deferredRenderer.BeginLightPass();
                 var eye = _camera.GetEyePosition();
                 var dirLight = new DirectionalLight
@@ -237,7 +242,6 @@ namespace Sphere
                 largeLight.Position = new Vector3(-2*Radius, 0, 0);
                 largeLight.Color = new Vector3(0,0,1);
                 _deferredRenderer.DrawPointLight(eye, largeLight);
-
                 _deferredRenderer.EndLightPass();
             }
 
@@ -250,14 +254,16 @@ namespace Sphere
             if (e.Key == Key.R) _camera.ResetToDefault();
             if (e.Key == Key.F11) _program = _programOdd;
             if (e.Key == Key.F12) _program = _programEqual;
-            if (e.Key == Key.F5 || e.Key == Key.F6)
+            if (e.Key == Key.F5 || e.Key == Key.F6 || e.Key == Key.F7|| e.Key == Key.F8)
             {
                 _camera.Disable(this);
                 var eye = _camera.GetEyePosition();
                 switch (e.Key)
                 {
                     case Key.F5: _camera = new ThirdPersonCamera(); break;
-                    case Key.F6: _camera = new FirstPersonCamera(); break;
+                    case Key.F6: _camera = new FirstPersonCamera { MoveSpeed = 60 }; break;
+                    case Key.F7: _camera = new FirstPersonAlignedCamera { MoveSpeed = 60 }; break;
+                    case Key.F8: _camera = new LookAtCamera { MoveSpeed = 60 }; break;
                 }
                 _camera.Position = eye;
                 _camera.Enable(this);
