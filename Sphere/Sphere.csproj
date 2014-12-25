@@ -56,8 +56,6 @@
     <Reference Include="System.Drawing" />
   </ItemGroup>
   <ItemGroup>
-    <Compile Include="FirstPersonAlignedCamera.cs" />
-    <Compile Include="LookAtCamera.cs" />
     <Compile Include="Properties\AssemblyInfo.cs" />
     <Compile Include="Renderer\DeferredRenderer.cs" />
     <Compile Include="Renderer\DirectionalLight.cs" />

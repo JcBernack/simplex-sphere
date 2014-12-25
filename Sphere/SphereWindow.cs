@@ -60,7 +60,7 @@ namespace Sphere
         
         private DeferredRenderer _deferredRenderer;
         
-        private CameraBase _camera;
+        private readonly Camera _camera;
         private Matrix4 _modelMatrix;
         private Matrix4 _viewMatrix;
         private Matrix4 _modelViewMatrix;
@@ -92,11 +92,10 @@ namespace Sphere
             Persistence = 0.4292259f;
             Octaves = 10;
             // set up camera
-            //_camera = new ThirdPersonCamera { DefaultOrigin = new Vector3(0, Radius, 0) };
-            _camera = new ThirdPersonCamera();
+            _camera = new Camera();
+            _camera.State.Position.Z = 3 * Radius;
+            _camera.SetBehavior(new ThirdPersonBehavior());
             _camera.Enable(this);
-            _camera.DefaultPosition.Z = 3*Radius;
-            _camera.ResetToDefault();
             // hook up events
             Load += OnLoad;
             Unload += OnUnload;
@@ -163,12 +162,11 @@ namespace Sphere
 
         private void OnRender(object sender, FrameEventArgs e)
         {
-            Title = string.Format("Icosahedron tesselation - FPS: {0} - eye: {1} - edge length: {2} - r: {3} - h: {4} - t: {5} - p: {6}, o: {7} ",
-                FrameTimer.FpsBasedOnFramesRendered, _camera.GetEyePosition(), PixelsPerEdge, Radius, HeightScale, TerrainScale, Persistence, Octaves);
+            Title = string.Format("Icosahedron tesselation - FPS: {0} - camera: {1} - l: {2} - r: {3} - h: {4} - t: {5} - p: {6}, o: {7} ",
+                FrameTimer.FpsBasedOnFramesRendered, _camera, PixelsPerEdge, Radius, HeightScale, TerrainScale, Persistence, Octaves);
 
             // set up matrices
-            _viewMatrix = Matrix4.Identity;
-            _camera.ApplyCamera(ref _viewMatrix);
+            _viewMatrix = _camera.GetCameraTransform();
             if (!FixedTessellation) Matrix4.Mult(ref _modelMatrix, ref _viewMatrix, out _modelViewMatrix);
             
             // update uniforms
@@ -203,7 +201,7 @@ namespace Sphere
             {
                 // lighting pass
                 _deferredRenderer.BeginLightPass();
-                var eye = _camera.GetEyePosition();
+                var eye = _camera.State.Position;
                 var dirLight = new DirectionalLight
                 {
                     Direction = new Vector3(0,-1,0),
@@ -250,28 +248,19 @@ namespace Sphere
 
         private void OnKeyDown(object sender, KeyboardKeyEventArgs e)
         {
-            if (e.Key == Key.Escape) Close();
-            if (e.Key == Key.R) _camera.ResetToDefault();
-            if (e.Key == Key.F11) _program = _programOdd;
-            if (e.Key == Key.F12) _program = _programEqual;
-            if (e.Key == Key.F5 || e.Key == Key.F6 || e.Key == Key.F7|| e.Key == Key.F8)
+            switch (e.Key)
             {
-                _camera.Disable(this);
-                var eye = _camera.GetEyePosition();
-                switch (e.Key)
-                {
-                    case Key.F5: _camera = new ThirdPersonCamera(); break;
-                    case Key.F6: _camera = new FirstPersonCamera { MoveSpeed = 60 }; break;
-                    case Key.F7: _camera = new FirstPersonAlignedCamera { MoveSpeed = 60 }; break;
-                    case Key.F8: _camera = new LookAtCamera { MoveSpeed = 60 }; break;
-                }
-                _camera.Position = eye;
-                _camera.Enable(this);
+                case Key.Escape: Close(); break;
+                case Key.F11: _program = _programOdd; break;
+                case Key.F12: _program = _programEqual; break;
+                case Key.F5: _camera.SetBehavior(new ThirdPersonBehavior()); break;
+                case Key.F6: _camera.SetBehavior(new FreeLookBehavior()); break;
+                case Key.F7: _camera.SetBehavior(new FreeLookAlignedBehavior()); break;
+                case Key.Number1: SetBuffer(GBufferType.Position); break;
+                case Key.Number2: SetBuffer(GBufferType.Normal); break;
+                case Key.Number3: SetBuffer(GBufferType.Diffuse); break;
+                case Key.Number4: SetBuffer(GBufferType.Aux); break;
             }
-            if (e.Key == Key.Number1) SetBuffer(GBufferType.Position);
-            if (e.Key == Key.Number2) SetBuffer(GBufferType.Normal);
-            if (e.Key == Key.Number3) SetBuffer(GBufferType.Diffuse);
-            if (e.Key == Key.Number4) SetBuffer(GBufferType.Aux);
         }
 
         private void SetBuffer(GBufferType buffer)
