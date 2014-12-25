@@ -8,6 +8,7 @@ namespace Sphere.Shaders
     [VertexShaderSource("Geodesic.Vertex")]
     [TessControlShaderSource("Geodesic.TessControl")]
     [TessEvaluationShaderSource("Geodesic.TessEval.Equal")]
+    [GeometryShaderSource("Geodesic.Geometry")]
     [FragmentShaderSource("Geodesic.Fragment")]
     public class GeodesicProgram
         : Program

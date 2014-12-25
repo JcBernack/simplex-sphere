@@ -119,7 +119,7 @@ in VertexData
 	vec3 terrainPosition;
 } ins[];
 
-out TessData
+out TessEvalData
 {
 	vec3 unitPosition;
 } outs[];
@@ -199,16 +199,16 @@ layout(triangles, equal_spacing, cw) in;
 #include Geodesic.TessEval.Main
 
 -- TessEval.Main
-in TessData
+in TessEvalData
 {
 	vec3 unitPosition;
 } ins[];
 
-out FragmentData
+out TessControlData
 {
 	smooth vec3 unitPosition;
 	smooth vec3 position;
-	smooth vec3 tessCoord;
+	smooth vec3 patchCoord;
 	smooth float height;
 	smooth vec3 gradient;
 } outs;
@@ -227,7 +227,7 @@ vec3 GetTessPos(vec3 coords)
 void main()
 {
 	// output the barycentric coordinates to render the wireframe in the fragment shader
-	outs.tessCoord = gl_TessCoord;
+	outs.patchCoord = gl_TessCoord;
 	// calculate new point on the unit sphere
 	outs.unitPosition = GetTessPos(gl_TessCoord);
 	// calculate point on terrain
@@ -236,14 +236,60 @@ void main()
 	gl_Position = ModelViewProjectionMatrix * pos;
 }
 
--- Fragment
+-- Geometry
 #version 400
 
-in FragmentData
+layout(triangles) in;
+layout(triangle_strip, max_vertices = 3) out;
+
+in TessControlData
 {
 	smooth vec3 unitPosition;
 	smooth vec3 position;
-	smooth vec3 tessCoord;
+	smooth vec3 patchCoord;
+	smooth float height;
+	smooth vec3 gradient;
+} ins[];
+
+out GeometryData
+{
+	smooth vec3 unitPosition;
+	smooth vec3 position;
+	smooth vec3 patchCoord;
+	smooth vec3 triangleCoord;
+	smooth float height;
+	smooth vec3 gradient;
+} outs;
+
+void Passthrough(int i, vec3 triangleCoord)
+{
+	outs.unitPosition = ins[i].unitPosition;
+	outs.position = ins[i].position;
+	outs.patchCoord = ins[i].patchCoord;
+	outs.height = ins[i].height;
+	outs.gradient = ins[i].gradient;
+	outs.triangleCoord = triangleCoord;
+	gl_Position = gl_in[i].gl_Position;
+	EmitVertex();
+}
+
+void main()
+{
+	Passthrough(0, vec3(1,0,0));
+	Passthrough(1, vec3(0,1,0));
+	Passthrough(2, vec3(0,0,1));
+	EndPrimitive();
+}
+
+-- Fragment
+#version 400
+
+in GeometryData
+{
+	smooth vec3 unitPosition;
+	smooth vec3 position;
+	smooth vec3 patchCoord;
+	smooth vec3 triangleCoord;
 	smooth float height;
 	smooth vec3 gradient;
 } ins;
@@ -310,8 +356,10 @@ void main()
 	// add wireframe to color
 	if (EnableWireframe)
 	{
-		float d = min(min(ins.tessCoord.x, ins.tessCoord.y), ins.tessCoord.z);
-		color *= clamp(d*d*1000, 0, 1);
+		float d = min(min(ins.patchCoord.x, ins.patchCoord.y), ins.patchCoord.z);
+		color = mix(vec3(1,1,1), color, step(0.25, d*d*1000));
+		d = min(min(ins.triangleCoord.x, ins.triangleCoord.y), ins.triangleCoord.z);
+		color = mix(vec3(1,1,1), color, clamp(d*d*1000, 0, 1));
 	}
 	// output into gbuffer
 	Position = vec4(position, 1);
