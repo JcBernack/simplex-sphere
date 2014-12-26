@@ -93,8 +93,9 @@ namespace Sphere
             Octaves = 10;
             // set up camera
             _camera = new Camera();
-            _camera.State.Position.Z = 3 * Radius;
             _camera.SetBehavior(new ThirdPersonBehavior());
+            _camera.DefaultState.Position.Z = 3 * Radius;
+            _camera.ResetToDefault();
             _camera.Enable(this);
             // hook up events
             Load += OnLoad;
@@ -251,11 +252,12 @@ namespace Sphere
             switch (e.Key)
             {
                 case Key.Escape: Close(); break;
-                case Key.F11: _program = _programOdd; break;
-                case Key.F12: _program = _programEqual; break;
+                case Key.R: _camera.ResetToDefault(); break;
                 case Key.F5: _camera.SetBehavior(new ThirdPersonBehavior()); break;
                 case Key.F6: _camera.SetBehavior(new FreeLookBehavior()); break;
                 case Key.F7: _camera.SetBehavior(new FreeLookAlignedBehavior()); break;
+                case Key.F11: _program = _programOdd; break;
+                case Key.F12: _program = _programEqual; break;
                 case Key.Number1: SetBuffer(GBufferType.Position); break;
                 case Key.Number2: SetBuffer(GBufferType.Normal); break;
                 case Key.Number3: SetBuffer(GBufferType.Diffuse); break;
