@@ -2,6 +2,7 @@ using System;
 using System.Collections.Generic;
 using System.Linq;
 using System.Reflection;
+using ObjectTK;
 using OpenTK;
 using OpenTK.Input;
 
@@ -18,7 +19,7 @@ namespace Sphere.Variables
             _variables = new Dictionary<VariableBaseAttribute, FieldInfo>();
             foreach (var field in instance.GetType().GetFields(BindingFlags.Instance | BindingFlags.Public))
             {
-                var attribute = field.GetCustomAttributes<VariableBaseAttribute>().FirstOrDefault();
+                var attribute = field.GetCustomAttributes<VariableBaseAttribute>(false).FirstOrDefault();
                 if (attribute == null) continue;
                 _variables.Add(attribute, field);
             }

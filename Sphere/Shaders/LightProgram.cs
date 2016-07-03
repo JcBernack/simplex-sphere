@@ -1,9 +1,11 @@
-﻿using ObjectTK.Shaders.Variables;
+﻿using ObjectTK.Shaders.Sources;
+using ObjectTK.Shaders.Variables;
 using OpenTK;
 using OpenTK.Graphics.OpenGL;
 
 namespace Sphere.Shaders
 {
+    [VertexShaderSource("Shading.Vertex")]
     public abstract class LightProgram
         : GBufferProgram
     {

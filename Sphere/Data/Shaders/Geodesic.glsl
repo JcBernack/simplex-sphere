@@ -31,7 +31,12 @@ vec3 GetTerrainOctaves(vec3 unitPosition, out float height, out vec3 gradient)
 	vec3 gradientLocal;
 	for (int i = 0; i < Octaves; i++)
 	{
-		noise += snoise(unitPosition * TerrainScale * frequency, gradientLocal) * amplitude;
+		float add = snoise(unitPosition * TerrainScale * frequency, gradientLocal);
+		//TODO: add multifractal/ridged fractal stuff
+		if (add > 0) add = 1 - add;
+		else add = 1 + add;
+		add = add*2-1;
+		noise += add * amplitude;
 		gradient += gradientLocal * frequency * amplitude;
 		rangeSum += amplitude;
 		frequency *= 2;
@@ -128,6 +133,7 @@ out TessEvalData
 #include Geodesic.Terrain
 #define ID gl_InvocationID
 uniform float EdgesPerScreenHeight;
+uniform vec3 ModelCameraPosition;
 
 // source for tessellation level calculation: Nvidia
 // https://developer.nvidia.com/content/dynamic-hardware-tessellation-basics
@@ -151,10 +157,15 @@ bool EdgeInFrustrum(vec4 p, vec4 q)
 bool IsFrontFace(vec4 p0, vec4 p1, vec4 p2)
 {
 	//TODO: patch-wise backface culling often produces wrong results, think of something better
-	return true;
 	vec4 edge1 = p1/p1.w-p0/p0.w;
 	vec4 edge2 = p2/p2.w-p0/p0.w;
 	return cross(edge1.xyz, edge2.xyz).z < 0;
+}
+
+// Test if point is on the cameras half of the planet
+bool IsFrontSide(vec3 p)
+{
+	return dot(ModelCameraPosition, p) > 0;
 }
 
 void main()
@@ -163,24 +174,27 @@ void main()
 	outs[ID].unitPosition = ins[ID].unitPosition;
 	// continue only with the first invocation per patch
 	if (ID > 0) return;
-	// determine tesselation level
-	vec4 p0 = ProjectionMatrix * vec4(ins[0].terrainPosition, 1);
-	vec4 p1 = ProjectionMatrix * vec4(ins[1].terrainPosition, 1);
-	vec4 p2 = ProjectionMatrix * vec4(ins[2].terrainPosition, 1);
-	if (IsFrontFace(p0, p1, p2) && (EdgeInFrustrum(p0, p1) || EdgeInFrustrum(p1, p2) || EdgeInFrustrum(p2, p0)))
+	// skip processing of patches on the back side of the planet
+	if (IsFrontSide(ins[ID].unitPosition))
 	{
-		gl_TessLevelOuter[0] = GetTessLevel(1, 2);
-		gl_TessLevelOuter[1] = GetTessLevel(2, 0);
-		gl_TessLevelOuter[2] = GetTessLevel(0, 1);
-		gl_TessLevelInner[0] = max(max(gl_TessLevelOuter[0], gl_TessLevelOuter[1]), gl_TessLevelOuter[2]);
+		// determine tesselation level
+		vec4 p0 = ProjectionMatrix * vec4(ins[0].terrainPosition, 1);
+		vec4 p1 = ProjectionMatrix * vec4(ins[1].terrainPosition, 1);
+		vec4 p2 = ProjectionMatrix * vec4(ins[2].terrainPosition, 1);
+		if (EdgeInFrustrum(p0, p1) || EdgeInFrustrum(p1, p2) || EdgeInFrustrum(p2, p0))
+		{
+			gl_TessLevelOuter[0] = GetTessLevel(1, 2);
+			gl_TessLevelOuter[1] = GetTessLevel(2, 0);
+			gl_TessLevelOuter[2] = GetTessLevel(0, 1);
+			gl_TessLevelInner[0] = max(max(gl_TessLevelOuter[0], gl_TessLevelOuter[1]), gl_TessLevelOuter[2]);
+			return;
+		}
 	}
-	else
-	{
-		gl_TessLevelOuter[0] = 0;
-		gl_TessLevelOuter[1] = 0;
-		gl_TessLevelOuter[2] = 0;
-		gl_TessLevelInner[0] = 0;
-	}
+	// cull patches outside the view frustrum or on the back side of the planet
+	gl_TessLevelOuter[0] = 0;
+	gl_TessLevelOuter[1] = 0;
+	gl_TessLevelOuter[2] = 0;
+	gl_TessLevelInner[0] = 0;
 }
 
 -- TessEval.Odd
@@ -351,7 +365,7 @@ void main()
 	if (EnableNoiseTexture)
 	{
 		const float range = 0.1;
-		color *= (1-range) + snoise(position*20) * range;
+		color *= (1-range) + snoise(position*5) * range;
 	}
 	// add wireframe to color
 	if (EnableWireframe)

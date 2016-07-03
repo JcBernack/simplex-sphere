@@ -1,10 +1,10 @@
 ﻿using System;
+using log4net.Config;
 using ObjectTK;
 using ObjectTK.Buffers;
-using ObjectTK.Cameras;
 using ObjectTK.Shaders;
-using ObjectTK.Utilities;
-using log4net.Config;
+using ObjectTK.Tools;
+using ObjectTK.Tools.Cameras;
 using OpenTK;
 using OpenTK.Graphics;
 using OpenTK.Graphics.OpenGL;
@@ -166,12 +166,14 @@ namespace Sphere
             Title = string.Format("Icosahedron tesselation - FPS: {0} - camera: {1} - l: {2} - r: {3} - h: {4} - t: {5} - p: {6}, o: {7} ",
                 FrameTimer.FpsBasedOnFramesRendered, _camera, PixelsPerEdge, Radius, HeightScale, TerrainScale, Persistence, Octaves);
 
-            // set up matrices
-            _viewMatrix = _camera.GetCameraTransform();
-            if (!FixedTessellation) Matrix4.Mult(ref _modelMatrix, ref _viewMatrix, out _modelViewMatrix);
-            
             // update uniforms
             _program.Use();
+            _viewMatrix = _camera.GetCameraTransform();
+            if (!FixedTessellation)
+            {
+                Matrix4.Mult(ref _modelMatrix, ref _viewMatrix, out _modelViewMatrix);
+                _program.ModelCameraPosition.Set(Vector3.Transform(_camera.State.Position, _modelMatrix.Inverted()));
+            }
             _program.ModelMatrix.Set(_modelMatrix);
             _program.ViewMatrix.Set(_viewMatrix);
             _program.ProjectionMatrix.Set(_projectionMatrix);
@@ -228,9 +230,10 @@ namespace Sphere
                 //    _deferredRenderer.DrawPointLight(eye, light);
                 //    Vector3.Transform(ref light.Position, ref rot, out light.Position);
                 //}
+                var t = FrameTimer.TimeRunning / 1000;
                 var largeLight = new PointLight
                 {
-                    Position = new Vector3(2*Radius, 0, 0),
+                    Position = new Vector3((float)Math.Cos(t)*2*Radius, (float)Math.Sin(t) * 2 * Radius, 0),
                     Color = new Vector3(1,0,0)
                 };
                 largeLight.SetLinearRange(10*Radius, 2*Radius, 0.95f);
@@ -238,9 +241,9 @@ namespace Sphere
                 //largeLight.Position = new Vector3(0, 0, 2*Radius);
                 //largeLight.Color = new Vector3(0,1,0);
                 //_deferredRenderer.DrawPointLight(eye, largeLight);
-                largeLight.Position = new Vector3(-2*Radius, 0, 0);
-                largeLight.Color = new Vector3(0,0,1);
-                _deferredRenderer.DrawPointLight(eye, largeLight);
+                //largeLight.Position = new Vector3(-2*Radius, 0, 0);
+                //largeLight.Color = new Vector3(0,0,1);
+                //_deferredRenderer.DrawPointLight(eye, largeLight);
                 _deferredRenderer.EndLightPass();
             }
 

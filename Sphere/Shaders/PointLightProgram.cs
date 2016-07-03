@@ -1,10 +1,9 @@
-﻿using ObjectTK.Shaders;
+﻿using ObjectTK.Shaders.Sources;
 using ObjectTK.Shaders.Variables;
 using OpenTK;
 
 namespace Sphere.Shaders
 {
-    [VertexShaderSource("Shading.Vertex")]
     [FragmentShaderSource("Shading.Fragment.Light.Point")]
     public class PointLightProgram
         : LightProgram

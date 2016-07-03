@@ -1,4 +1,5 @@
 ﻿using ObjectTK.Shaders;
+using ObjectTK.Shaders.Sources;
 using ObjectTK.Shaders.Variables;
 using OpenTK;
 using OpenTK.Graphics.OpenGL;
@@ -22,6 +23,8 @@ namespace Sphere.Shaders
         public Uniform<Matrix4> ModelViewMatrix { get; protected set; }
         public Uniform<Matrix4> ModelViewProjectionMatrix { get; protected set; }
         public Uniform<Matrix3> NormalMatrix { get; protected set; }
+
+        public Uniform<Vector3> ModelCameraPosition { get; protected set; }
 
         public Uniform<float> EdgesPerScreenHeight { get; protected set; }
         public Uniform<float> Radius { get; protected set; }

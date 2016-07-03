@@ -1,6 +1,6 @@
 using System;
 using System.Collections.Generic;
-using ObjectTK.Shapes;
+using ObjectTK.Tools.Shapes;
 using OpenTK;
 
 namespace Sphere.Shapes

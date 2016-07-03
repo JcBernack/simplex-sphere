@@ -1,7 +1,7 @@
 using ObjectTK;
 using ObjectTK.Buffers;
 using ObjectTK.Shaders;
-using ObjectTK.Shapes;
+using ObjectTK.Tools.Shapes;
 using OpenTK;
 using OpenTK.Graphics.OpenGL;
 using Sphere.Shaders;
