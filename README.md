@@ -7,3 +7,7 @@ This was an awesome learning experience and to prevent it from getting lost I du
 ## Screenshot
 
 ![Screenshot](/documents/screenshot1.png)
+
+## License
+
+MIT
